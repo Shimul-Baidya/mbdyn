@@ -1139,7 +1139,7 @@ class DeformableHinge(Element):
             ' nodes' + '\n-------------------\n')
         assert isinstance(positions, list), (
             '\n-------------------\nERROR:' +
-            ' in defining a displacement hinge, the' +
+            ' in defining a deformable hinge, the' +
             ' relative positions must be given in a list' +
             '\n-------------------\n')
         assert len(nodes) == len(positions), (
@@ -1222,6 +1222,51 @@ class DeformableJoint(Element):
             s = s + self.constitutive_law
         else:
             s = s + ', '.join(str(i) for i in self.constitutive_law)
+        if self.output != 'yes':
+            s = s + ',\n\toutput, ' + str(self.output)
+        s = s + ';\n'
+        return s
+    
+class SphericalHinge(Element):
+    def __init__(self, idx, nodes, positions, orientations, output = 'yes'):
+        assert isinstance(nodes, list), (
+            '\n-------------------\nERROR:' +
+            ' in defining a spherical hinge, the' +
+            ' nodes must be given in a list' +
+            '\n-------------------\n')
+        assert len(nodes) == 2, (
+            '\n-------------------\nERROR:' +
+            ' defining a spherical hinge with ' + str(len(nodes)) +
+            ' nodes' + '\n-------------------\n')
+        assert isinstance(positions, list), (
+            '\n-------------------\nERROR:' +
+            ' in defining a spherical hinge, the' +
+            ' relative positions must be given in a list' +
+            '\n-------------------\n')
+        assert len(nodes) == len(positions), (
+            '\n-------------------\nERROR:' +
+            ' defining a spherical hinge with ' + str(len(nodes)) +
+            ' nodes and ' + str(len(positions)) + ' relative positions;\n' +
+            '\n-------------------\n')
+        assert isinstance(orientations, list), (
+            '\n-------------------\nERROR:' +
+            ' in defining a spherical hinge, the' +
+            ' relative position orientations must be given in a list' +
+            '\n-------------------\n')
+        self.idx = idx
+        self.type = 'spherical hinge'
+        self.nodes = nodes
+        self.positions = positions
+        self.orientations = orientations
+        self.output = output
+    def __str__(self):
+        s = 'joint: ' + str(self.idx) + ', spherical hinge'
+        for (node, pos, orient) in zip(self.nodes, self.positions, self.orientations):
+            s = s + ',\n\t' + str(node)
+            if not(pos.isnull()):
+                s = s + ',\n\t\tposition, ' + str(pos)
+            if not(orient.iseye()):
+                s = s + ',\n\t\torientation, ' + str(orient)
         if self.output != 'yes':
             s = s + ',\n\toutput, ' + str(self.output)
         s = s + ';\n'
