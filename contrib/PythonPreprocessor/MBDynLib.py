@@ -1113,9 +1113,9 @@ class DeformableDiaplacement(Element):
         for (node, pos, orient) in zip(self.nodes, self.positions, self.orientations):
             s = s + ',\n\t' + str(node)
             if not(pos.isnull()):
-                s + s + ',\n\t\tposition, ' + str(pos)
+                s = s + ',\n\t\tposition, ' + str(pos)
             if not(self.pos_or.iseye()):
-                s + s + ',\n\t\torientation, ' + str(orient)
+                s = s + ',\n\t\torientation, ' + str(orient)
         s = s + '\n\t'
         if isinstance(self.constitutive_law, str):
             s = s + self.constitutive_law
@@ -1164,9 +1164,9 @@ class DeformableHinge(Element):
         for (node, pos, orient) in zip(self.nodes, self.positions, self.orientations):
             s = s + ',\n\t' + str(node)
             if not(pos.isnull()):
-                s + s + ',\n\t\tposition, ' + str(pos)
+                s = s + ',\n\t\tposition, ' + str(pos)
             if not(orient.iseye()):
-                s + s + ',\n\t\torientation, ' + str(orient)
+                s = s + ',\n\t\torientation, ' + str(orient)
         s = s + ',\n\t'
         if isinstance(self.constitutive_law, str):
             s = s + self.constitutive_law
