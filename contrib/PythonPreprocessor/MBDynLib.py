@@ -1176,6 +1176,56 @@ class DeformableHinge(Element):
             s = s + ',\n\toutput, ' + str(self.output)
         s = s + ';\n'
         return s
+    
+class DeformableJoint(Element):
+    def __init__(self, idx, nodes, positions, orientations, const_law, output = 'yes'):
+        assert isinstance(nodes, list), (
+            '\n-------------------\nERROR:' +
+            ' in defining a deformable joint, the' +
+            ' nodes must be given in a list' +
+            '\n-------------------\n')
+        assert len(nodes) == 2, (
+            '\n-------------------\nERROR:' +
+            ' defining a deformable joint with ' + str(len(nodes)) +
+            ' nodes' + '\n-------------------\n')
+        assert isinstance(positions, list), (
+            '\n-------------------\nERROR:' +
+            ' in defining a deformable joint, the' +
+            ' relative positions must be given in a list' +
+            '\n-------------------\n')
+        assert len(nodes) == len(positions), (
+            '\n-------------------\nERROR:' +
+            ' defining a deformable joint with ' + str(len(nodes)) +
+            ' nodes and ' + str(len(positions)) + ' relative positions;\n' +
+            '\n-------------------\n')
+        assert isinstance(orientations, list), (
+            '\n-------------------\nERROR:' +
+            ' in defining a deformable joint, the' +
+            ' relative position orientations must be given in a list' +
+            '\n-------------------\n')
+        self.idx = idx
+        self.type = 'joint'
+        self.nodes = nodes
+        self.positions = positions
+        self.orientations = orientations
+        self.constitutive_law = const_law
+    def __str__(self):
+        s = 'joint: ' + str(self.idx) + ', deformable joint'
+        for (node, pos, orient) in zip(self.nodes, self.positions, self.orientations):
+            s = s + ',\n\t' + str(node)
+            if not(pos.isnull()):
+                s = s + ',\n\t\tposition, ' + str(pos)
+            if not(self.pos_or.iseye()):
+                s = s + ',\n\t\torientation, ' + str(orient)
+        s = s + '\n\t'
+        if isinstance(self.constitutive_law, str):
+            s = s + self.constitutive_law
+        else:
+            s = s + ', '.join(str(i) for i in self.constitutive_law)
+        if self.output != 'yes':
+            s = s + ',\n\toutput, ' + str(self.output)
+        s = s + ';\n'
+        return s
 
 class Shell(Element):
     def __init__(self, shell_type, idx, nodes, const_law, output = 'yes'):
