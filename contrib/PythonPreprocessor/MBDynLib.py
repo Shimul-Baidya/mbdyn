@@ -388,7 +388,7 @@ class MBVar(terminal_expression):
             if ('string' in self.var_type):
                 print('set: ' + self.var_type + ' ' + self.name + ' = \"' + str(self.expression) + '\";')
             else:
-                print('set: ' + self.name + ' = ' + str(self.expression) + ';')
+                print('set: ' + self.var_type + ' ' + self.name + ' = ' + str(self.expression) + ';')
         #globals()[self.name] = self    
         #__builtins__[self.name] = self    
         setattr(builtins, self.name, self)
