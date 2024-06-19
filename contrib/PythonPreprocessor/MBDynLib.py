@@ -48,21 +48,52 @@
 #License along with this library; if not, write to the Free Software
 #Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.
 
-from __future__ import print_function, division
-import sys
-from numbers import Number, Integral
-import pdb
 
-if sys.version_info[0] < 3:
-        import __builtin__ as builtins
-else:
-        import builtins
+from abc import ABC, abstractmethod
+import builtins
+from enum import Enum
+from numbers import Number, Integral
+import sys
+from typing import Optional, Tuple, Union
+
+assert sys.version_info >= (3,6), 'Syntax for variable annotations (PEP 526) was introduced in Python 3.6'
 
 declared_ConstMBVars = {}
 declared_IfndefMBVars = {}
 declared_MBVars = {}
 
 MBDynLib_simplify = True
+
+try:
+    from pydantic import BaseModel, ConfigDict
+    class _EntityBase(BaseModel):
+        """Configuration for Entity with pydantic available"""
+        model_config = ConfigDict(extra='forbid',
+                                  use_attribute_docstrings=True)
+
+except ImportError:
+    class _EntityBasePlaceholder:
+        """Placeholder with minimal functionality for running a correct model when some libraries aren't available"""
+
+        def __init__(self, *args, **kwargs):
+            if len(args) > 0:
+                raise TypeError(
+                    'MBDyn entities cannot be initialized using positional arguments')
+            for key, value in kwargs.items():
+                setattr(self, key, value)
+
+    # HACK: This forces code analysis to always use the definition with pydantic
+    exec('_EntityBase = _EntityBasePlaceholder')
+
+
+class MBEntity(_EntityBase, ABC):
+    """Base class for every 'thing' to put in MBDyn file, other than numbers"""
+
+    @abstractmethod
+    def __str__(self) -> str:
+        """Has to be overridden to output the MBDyn syntax"""
+        pass
+
 
 def errprint(*args, **kwargs):
     print(*args, file = sys.stderr, **kwargs)
@@ -321,10 +352,29 @@ class power(binary_expression):
             rs = '(' + rs + ')'
         return ls + ' ^ ' + rs
 
-class MBVar(terminal_expression):
-    base_types = ('bool', 'integer', 'real', 'string')
-    var_types = base_types + tuple(['const' + ' ' + ti for ti in base_types]) +\
-                tuple(['ifndef' + ' ' + 'const' + ti for ti in base_types])
+
+# Enum entries need annotated type to find descriptions for documentation
+class MBVarType(str, Enum):
+    """Built-in types in math parser"""
+    BOOL: str = 'bool'
+    """Boolean number (promoted to `integer`, `real`, or `string` (0 or 1), whenever required)"""
+    INTEGER: str = 'integer'
+    """Integer number (promoted to `real`, or `string`, whenever required)"""
+    REAL: str = 'real'
+    """Real number (promoted to `string` whenever required)"""
+    STRING: str = 'string'
+    """Text string"""
+
+class MBVarModifiers(str, Enum):
+    CONST: str = 'const'
+    DEFINE: str = 'ifndef const'
+
+class MBVar(MBEntity, terminal_expression):
+    base_type: MBVarType
+    type_modifier: Optional[MBVarModifiers]
+    var_types: Tuple[str] = tuple([t.value for t in MBVarType] +\
+                                  [f'{MBVarModifiers.CONST} {t.value}' for t in MBVarType] +\
+                                  [f'{MBVarModifiers.DEFINE} {t.value}' for t in MBVarType])
     def __init__(self, name, var_type, expression):
         assert(name)
         self.name = name
@@ -1630,7 +1680,43 @@ class NodeDof:
 # Drives
 class DriveCaller:
     idx = -1
-    pass
+
+# TODO: Rename to DriveCaller when all are moved
+class DriveCaller2(MBEntity):
+    """
+    Abstract class for C++ type `DriveCaller`. Every time some entity can be driven, i.e. a value can be expressed
+    as dependent on some external input, an object of the class  `DriveCaller` is used.
+
+    The `drive` essentially represents a scalar function, whose value can change over time or,
+    through some more sophisticated means, can depend on the state of the analysis.
+    Usually, the dependence over time is implicitly assumed, unless otherwise specified.
+
+    For example, the amplitude of the force applied by a  `force` element is defined by means of a `drive`;
+    as such, the value of the `drive` is implicitly calculated as a function of the time.
+    However, a  `dof drive` uses a subordinate `drive` to compute its value based on the value of
+    a degree of freedom of the analysis; as a consequence, the value of the `dof drive` is represented
+    by the value of the subordinate `drive` when evaluated as a function of that specific degree of freedom
+    at the desired time (function of function).
+
+    The family of the `DriveCaller` object is very large.
+    """
+    idx: Optional[Union[MBVar, int]] = None
+    """Index of this drive to reuse with references"""
+
+    @abstractmethod
+    def drive_type(self) -> str:
+        """Every drive class must define this to return its MBDyn syntax name"""
+        raise NotImplementedError("called drive_type of abstract DriveCaller")
+
+    def drive_header(self) -> str:
+        """common syntax for start of any drive caller"""
+        # it's not just `__str__` to still require overriding it in specific drives
+        if self.idx is not None:
+            # The idx possibly being None communicates the intent more clearly than checking if it's >=0
+            return f'drive caller: {self.idx}, {self.drive_type()}'
+        else:
+            return self.drive_type()
+
 
 class ArrayDriveCaller(DriveCaller):
     type = 'array'
@@ -1716,35 +1802,18 @@ class BistopDriveCaller(DriveCaller):
         return s
 
 
-class ConstDriveCaller(DriveCaller):
-    type = 'const'
-    def __init__(self, **kwargs):
-        try:
-            assert isinstance(kwargs['idx'], (Integral, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' ConstDriveCaller: <idx> must either be an integer value or an MBVar' + 
-                    '\n-------------------\n')
-            self.idx = kwargs['idx']
-        except KeyError:
-            pass
-        
-        try:
-            assert isinstance(kwargs['const_value'], (Number, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' ConstDriveCaller: <const_value> must either be a number or an MBVar' + 
-                    '\n-------------------\n')
-            self.const_value = kwargs['const_value']
-        except KeyError:
-            errprint(
-                '\n-------------------\nERROR:' +
-                ' ConstDriveCaller: <const_value> must be provided' + 
-                '\n-------------------\n')
+class ConstDriveCaller(DriveCaller2):
+    """An example of `DriveCaller` that always returns the same constant value"""
+
+    # Note that method docstrings are inherited correctly (unlike dataclass fields)
+    def drive_type(self):
+        return 'const'
+
+    const_value: Union[MBVar, float, int]
+    """Value that will be output by the drive"""
+
     def __str__(self):
-        s = ''
-        if self.idx >= 0:
-            s = s + 'drive caller: {}, '.format(self.idx) 
-        s = s + '{}, {}'.format(self.type, self.const_value)
-        return s
+        return f'''{self.drive_header()}, {self.const_value}'''
 
 
 class ClosestNextDriveCaller(DriveCaller):
