@@ -1717,15 +1717,6 @@ class DriveCaller2(MBEntity):
         else:
             return self.drive_type()
 
-
-    def constitutive_law_header(self) -> str:
-        """common syntax for start of any constitutive law"""
-        if self.idx is not None:
-            return f'constitutive law: {self.idx}, name, "{self.name()}", {self.dim()}, {self.const_law_name()}'
-        else:
-            return self.const_law_name()
-
-
 class ArrayDriveCaller(DriveCaller):
     type = 'array'
     def __init__(self, *args, **kwargs):
@@ -3880,6 +3871,7 @@ class ConstitutiveLaw(MBEntity, ABC):
     order to understand what the input and the output parameters are supposed to be.
     """
 
+    # Define class constants for the constitutive law names
     SCALAR_ISOTROPIC_LAW = "scalar isotropic law"
     D3_ISOTROPIC_LAW = "3D isotropic law"
     D6_ISOTROPIC_LAW = "6D isotropic law"
