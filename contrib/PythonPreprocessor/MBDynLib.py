@@ -1718,6 +1718,14 @@ class DriveCaller2(MBEntity):
             return self.drive_type()
 
 
+    def constitutive_law_header(self) -> str:
+        """common syntax for start of any constitutive law"""
+        if self.idx is not None:
+            return f'constitutive law: {self.idx}, name, "{self.name()}", {self.dim()}, {self.const_law_name()}'
+        else:
+            return self.const_law_name()
+
+
 class ArrayDriveCaller(DriveCaller):
     type = 'array'
     def __init__(self, *args, **kwargs):
@@ -1814,6 +1822,82 @@ class ConstDriveCaller(DriveCaller2):
 
     def __str__(self):
         return f'''{self.drive_header()}, {self.const_value}'''
+    
+class ConstitutiveLaw(MBEntity, ABC):
+    """
+    Abstract class for C++ type `ConstitutiveLaw`. Every time a “deformable”
+    entity requires a constitutive law, a template constitutive law is read. This has been implemented by
+    means of C++ templates in order to allow the definition of a general constitutive law when possible.
+
+    Constitutive laws are also used in non-structural components, to allow some degree of generality in
+    defining input/output relationships. Some constitutive laws are meaningful only when related to some
+    precise dimensionality. In some special cases, general purpose elements use 1D constitutive laws
+    to express an arbitrary dependence of some value on a scalar state of the system.
+
+    The meaning of the input and output parameters of a constitutive law is dictated by the entity that
+    uses it. In general, the user should refer to the element the constitutive law is being instantiated for in
+    order to understand what the input and the output parameters are supposed to be.
+    """
+
+    SCALAR_ISOTROPIC_LAW = "scalar isotropic law"
+    D3_ISOTROPIC_LAW = "3D isotropic law"
+    D6_ISOTROPIC_LAW = "6D isotropic law"
+
+    idx: Optional[Union[MBVar, int]] = None
+    """Index of this constitutive law to reuse with references"""
+
+    @abstractmethod
+    def name(self) -> str:
+        """Every constitutive law class must have a name"""
+        raise NotImplementedError("called name of abstract ConstitutiveLaw")
+    
+    @abstractmethod
+    def const_law_name(self) -> str:
+        """Name of the specific constitutive law"""
+        raise NotImplementedError("called const_law_name of abstract ConstitutiveLaw")
+    
+    @property
+    def dim(self) -> int:
+        """Determine the dimensionality based on the constitutive law name"""
+        name = self.name()
+        if name == "scalar isotropic law":
+            return 1
+        elif name == "3D isotropic law":
+            return 3
+        elif name == "6D isotropic law":
+            return 6
+        else:
+            raise ValueError(f"Unknown constitutive law name: {name}")
+        
+    def const_law_header(self) -> str:
+        """common syntax for start of any constitutive law"""
+        if self.idx is not None:
+            return f'constitutive law: {self.idx}, name, "{self.name()}", {self.dim()}, {self.const_law_name()}'
+        else:
+            return self.const_law_name()
+
+    
+class LinearElastic(ConstitutiveLaw):
+    """
+    Linear elastic constitutive law implementation.
+    """
+
+    law_type: str
+    def name(self) -> str:
+        if self.law_type in (ConstitutiveLaw.SCALAR_ISOTROPIC_LAW, 
+                             ConstitutiveLaw.D3_ISOTROPIC_LAW, 
+                             ConstitutiveLaw.D6_ISOTROPIC_LAW):
+            return self.law_type
+        
+    def const_law_name(self) -> str:
+        return 'linear elastic'
+    
+    stiffness: Union[MBVar, float]
+    """The isotropic stiffness coefficient"""
+    
+    def __str__(self):
+        return f'{self.const_law_header()}, {self.stiffness}'
+    
 
 
 class ClosestNextDriveCaller(DriveCaller):
@@ -3774,6 +3858,87 @@ class UnitDriveCaller(DriveCaller):
             s = s + 'drive caller: {}, '.format(self.idx)
         s = s + '{}'.format(self.type)
         return s
+    
+# TODO: Implement after understanding how it should be implemented
+class TplDriveCaller(DriveCaller2):
+    pass 
+
+
+class ConstitutiveLaw(MBEntity, ABC):
+    """
+    Abstract class for C++ type `ConstitutiveLaw`. Every time a “deformable”
+    entity requires a constitutive law, a template constitutive law is read. This has been implemented by
+    means of C++ templates in order to allow the definition of a general constitutive law when possible.
+
+    Constitutive laws are also used in non-structural components, to allow some degree of generality in
+    defining input/output relationships. Some constitutive laws are meaningful only when related to some
+    precise dimensionality. In some special cases, general purpose elements use 1D constitutive laws
+    to express an arbitrary dependence of some value on a scalar state of the system.
+
+    The meaning of the input and output parameters of a constitutive law is dictated by the entity that
+    uses it. In general, the user should refer to the element the constitutive law is being instantiated for in
+    order to understand what the input and the output parameters are supposed to be.
+    """
+
+    SCALAR_ISOTROPIC_LAW = "scalar isotropic law"
+    D3_ISOTROPIC_LAW = "3D isotropic law"
+    D6_ISOTROPIC_LAW = "6D isotropic law"
+
+    idx: Optional[Union[MBVar, int]] = None
+    """Index of this constitutive law to reuse with references"""
+
+    @abstractmethod
+    def name(self) -> str:
+        """Every constitutive law class must have a name"""
+        raise NotImplementedError("called name of abstract ConstitutiveLaw")
+    
+    @abstractmethod
+    def const_law_name(self) -> str:
+        """Name of the specific constitutive law"""
+        raise NotImplementedError("called const_law_name of abstract ConstitutiveLaw")
+    
+    @property
+    def dim(self) -> int:
+        """Determine the dimensionality based on the constitutive law name"""
+        name = self.name()
+        if name == "scalar isotropic law":
+            return 1
+        elif name == "3D isotropic law":
+            return 3
+        elif name == "6D isotropic law":
+            return 6
+        else:
+            raise ValueError(f"Unknown constitutive law name: {name}")
+        
+    def const_law_header(self) -> str:
+        """common syntax for start of any constitutive law"""
+        if self.idx is not None:
+            return f'constitutive law: {self.idx}, name, "{self.name()}", {self.dim()}, {self.const_law_name()}'
+        else:
+            return self.const_law_name()
+
+    
+class LinearElastic(ConstitutiveLaw):
+    """
+    Linear elastic constitutive law implementation.
+    """
+
+    law_type: str
+    def name(self) -> str:
+        if self.law_type in (ConstitutiveLaw.SCALAR_ISOTROPIC_LAW, 
+                             ConstitutiveLaw.D3_ISOTROPIC_LAW, 
+                             ConstitutiveLaw.D6_ISOTROPIC_LAW):
+            return self.law_type
+        
+    def const_law_name(self) -> str:
+        return 'linear elastic'
+    
+    stiffness: Union[MBVar, float]
+    """The isotropic stiffness coefficient"""
+    
+    def __str__(self):
+        return f'{self.const_law_header()}, {self.stiffness}'
+    
 
 class Data:
     problem_type = ('INITIAL VALUE', 'INVERSE DYNAMICS')
