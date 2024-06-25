@@ -3850,7 +3850,6 @@ class UnitDriveCaller(DriveCaller):
         s = s + '{}'.format(self.type)
         return s
     
-# TODO: Implement after understanding how it should be implemented
 class TplDriveCaller(DriveCaller2):
     pass 
 
@@ -4032,6 +4031,57 @@ class LinearViscoelastic(ConstitutiveLaw):
             return f'{self.const_law_header()}, {self.stiffness}, proportional, {self.factor}'
         else:
             raise ValueError("Either viscosity or factor must be provided for Linear viscoelastic law")
+
+class DoubleLinearViscoelastic(ConstitutiveLaw):
+    """
+    Double linear viscoelastic constitutive law
+    """
+
+    law_type: ConstitutiveLaw.LawType
+    stiffness_1: Union[MBVar, float]
+    upper_strain: Union[MBVar, float]
+    lower_strain: Union[MBVar, float]
+    stiffness_2: Union[MBVar, float]
+    viscosity: Union[MBVar, float]
+    viscosity_2: Optional[Union[MBVar, float]] = None
+
+    def name(self) -> ConstitutiveLaw.LawType:
+        return self.law_type
+
+    def const_law_name(self) -> str:
+        return 'double linear viscoelastic'
+
+    def __str__(self):
+        base_str = f'{self.const_law_header()}, {self.stiffness_1}, {self.upper_strain}, {self.lower_strain}, {self.stiffness_2}, {self.viscosity}'
+        if self.viscosity_2 is not None:
+            return f'{base_str}, second damping, {self.viscosity_2}'
+        else:
+            return base_str
+        
+class TurbulentViscoelastic(ConstitutiveLaw):
+    """
+    Turbulent viscoelastic constitutive law
+    """
+
+    law_type: ConstitutiveLaw.LawType
+    stiffness: Union[MBVar, float]
+    parabolic_viscosity: Union[MBVar, float]
+    threshold: Optional[Union[MBVar, float]] = None
+    linear_viscosity: Optional[Union[MBVar, float]] = None
+
+    def name(self) -> ConstitutiveLaw.LawType:
+        return self.law_type
+
+    def const_law_name(self) -> str:
+        return 'turbulent viscoelastic'
+
+    def __str__(self):
+        base_str = f'{self.const_law_header()}, {self.stiffness}, {self.parabolic_viscosity}'
+        if self.threshold is not None:
+            base_str += f', {self.threshold}'
+            if self.linear_viscosity is not None:
+                base_str += f', {self.linear_viscosity}'
+        return base_str
 
 
 
