@@ -3871,10 +3871,10 @@ class ConstitutiveLaw(MBEntity, ABC):
     order to understand what the input and the output parameters are supposed to be.
     """
 
-    # Define class constants for the constitutive law names
-    SCALAR_ISOTROPIC_LAW = "scalar isotropic law"
-    D3_ISOTROPIC_LAW = "3D isotropic law"
-    D6_ISOTROPIC_LAW = "6D isotropic law"
+    class LawType(Enum):
+        SCALAR_ISOTROPIC_LAW = "scalar isotropic law"
+        D3_ISOTROPIC_LAW = "3D isotropic law"
+        D6_ISOTROPIC_LAW = "6D isotropic law"
 
     idx: Optional[Union[MBVar, int]] = None
     """Index of this constitutive law to reuse with references"""
@@ -3912,15 +3912,12 @@ class ConstitutiveLaw(MBEntity, ABC):
     
 class LinearElastic(ConstitutiveLaw):
     """
-    Linear elastic constitutive law implementation.
+    Linear elastic constitutive law
     """
 
-    law_type: str
-    def name(self) -> str:
-        if self.law_type in (ConstitutiveLaw.SCALAR_ISOTROPIC_LAW, 
-                             ConstitutiveLaw.D3_ISOTROPIC_LAW, 
-                             ConstitutiveLaw.D6_ISOTROPIC_LAW):
-            return self.law_type
+    law_type: ConstitutiveLaw.LawType
+    def name(self) -> ConstitutiveLaw.LawType:
+        return self.law_type
         
     def const_law_name(self) -> str:
         return 'linear elastic'
@@ -3930,7 +3927,113 @@ class LinearElastic(ConstitutiveLaw):
     
     def __str__(self):
         return f'{self.const_law_header()}, {self.stiffness}'
+
+class InverseSquareElastic(ConstitutiveLaw):
+    """
+    Inverse square elastic constitutive law
+    """
     
+    law_type: ConstitutiveLaw.LawType
+    stiffness: Union[MBVar, float]
+    ref_length: Union[MBVar, float]
+
+    def name(self) -> ConstitutiveLaw.LawType:
+        return self.law_type
+    
+    def const_law_name(self) -> str:
+        return 'inverse square elastic'
+    
+    def __str__(self):
+        return f'{self.const_law_header()}, {self.stiffness}, {self.ref_length}'
+
+class DoubleLinearElastic(ConstitutiveLaw):
+    """
+    Double linear elastic constitutive law
+    """
+
+    law_type: ConstitutiveLaw.LawType
+    stiffness_1: Union[MBVar, float]
+    upper_strain: Union[MBVar, float]
+    lower_strain: Union[MBVar, float]
+    stiffness_2: Union[MBVar, float]
+
+    def name(self) -> ConstitutiveLaw.LawType:
+        return self.law_type
+    
+    def const_law_name(self) -> str:
+        return 'double linear elastic'
+    
+    def __str__(self):
+        return f'{self.const_law_header()}, {self.stiffness_1}, {self.upper_strain}, {self.lower_strain}, {self.stiffness_2}'
+
+class IsotropicHardeningElastic(ConstitutiveLaw):
+    """
+    Isotropic hardening elastic constitutive law
+    """
+
+    law_type: ConstitutiveLaw.LawType
+    stiffness: Union[MBVar, float]
+    reference_strain: Union[MBVar, float]
+    linear_stiffness: Optional[Union[MBVar, float]]
+
+    def name(self) -> ConstitutiveLaw.LawType:
+        return self.law_type
+    
+    def const_law_name(self) -> str:
+        return 'isotropic hardening elastic'
+    
+    def __str__(self):
+        if self.linear_stiffness is not None:
+            return f'{self.const_law_header()}, {self.stiffness}, {self.reference_strain}, linear stiffness, {self.linear_stiffness}'
+        else:
+            return f'{self.const_law_header()}, {self.stiffness}, {self.reference_strain}'
+        
+class LinearViscous(ConstitutiveLaw):
+    """
+    Linear viscous constitutive law
+    """
+
+    law_type: ConstitutiveLaw.LawType
+    viscosity: Union[MBVar, float]
+
+    def name(self) -> ConstitutiveLaw.LawType:
+        return self.law_type
+    
+    def const_law_name(self) -> str:
+        return 'linear viscous'
+
+    def __str__(self):
+        return f'{self.const_law_header()}, {self.viscosity}'
+    
+class LinearViscoelastic(ConstitutiveLaw):
+    """
+    Linear viscoelastic constitutive law
+    """
+
+    law_type: ConstitutiveLaw.LawType
+    stiffness: Union[MBVar, float]
+
+    viscosity: Optional[Union[MBVar, float]]
+    """The viscosity coefficient"""
+
+    factor: Optional[Union[MBVar, float]]
+    """Factor for proportional viscosity"""
+
+    def name(self) -> ConstitutiveLaw.LawType:
+        return self.law_type
+    
+    def const_law_name(self) -> str:
+        return 'linear viscoelastic'
+
+    def __str__(self):
+        if self.viscosity is not None:
+            return f'{self.const_law_header()}, {self.stiffness}, {self.viscosity}'
+        elif self.factor is not None:
+            return f'{self.const_law_header()}, {self.stiffness}, proportional, {self.factor}'
+        else:
+            raise ValueError("Either viscosity or factor must be provided for Linear viscoelastic law")
+
+
 
 class Data:
     problem_type = ('INITIAL VALUE', 'INVERSE DYNAMICS')
