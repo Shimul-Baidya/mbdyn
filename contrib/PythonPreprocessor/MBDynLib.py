@@ -3841,7 +3841,10 @@ class LinearElastic(ConstitutiveLaw):
         return self.law_type
         
     def const_law_name(self) -> str:
-        return 'linear elastic'
+        if self.dim == 1:
+            return 'linear elastic'
+        else:
+            return 'linear elastic isotropic'
     
     stiffness: Union[MBVar, float]
     """The isotropic stiffness coefficient"""
@@ -3872,7 +3875,6 @@ class LinearElasticGeneric(ConstitutiveLaw):
             if N == 1:
                 return f'{self.const_law_header()}, {self.stiffness[0][0]}'
             elif N == 3 or N == 6:
-                # Print the full NxN matrix
                 matrix_str = ''
                 for i in range(N):
                     row_str = ', '.join(str(self.stiffness[i][j]) for j in range(N))
@@ -3889,7 +3891,7 @@ class LinearElasticGenericAxialTorsionCoupling(ConstitutiveLaw):
     """
 
     law_type: ConstitutiveLaw.LawType
-    stiffness: Union[float, MBVar, List[List[Union[float, MBVar]]]]
+    stiffness: Union[List[List[Union[float, MBVar]]]]
     coupling_coef: Union[float, MBVar]
 
     def name(self) -> ConstitutiveLaw.LawType:
@@ -3916,9 +3918,9 @@ class CubicElasticGeneric(ConstitutiveLaw):
 
     ### TODO: Ensure this is the correct data type
     law_type: ConstitutiveLaw.LawType
-    stiffness_1: Union[MBVar, MBEntity]
-    stiffness_2: Union[MBVar, MBEntity]
-    stiffness_3: Union[MBVar, MBEntity]
+    stiffness_1: Union[float, MBVar, List[Union[float, MBVar]]]
+    stiffness_2: Union[float, MBVar, List[Union[float, MBVar]]]
+    stiffness_3: Union[float, MBVar, List[Union[float, MBVar]]]
 
     def name(self) -> ConstitutiveLaw.LawType:
         return self.law_type
@@ -3928,7 +3930,21 @@ class CubicElasticGeneric(ConstitutiveLaw):
 
     ### TODO: Ensure this is the correct string representation
     def __str__(self):
-        return f'{self.const_law_header()}, {self.stiffness_1}, {self.stiffness_2}, {self.stiffness_3}'
+        base_str = f'{self.const_law_header()}'
+        if isinstance(self.stiffness_1, (float, MBVar)):
+            base_str += f', {self.stiffness_1}, {self.stiffness_2}, {self.stiffness_3}'
+        elif isinstance(self.stiffness_1, list):
+            N = len(self.stiffness_1)
+            if N == 3:
+                stiffness_1_str = ', '.join(str(self.stiffness_1[i]) for i in range(N))
+                stiffness_2_str = ', '.join(str(self.stiffness_2[i]) for i in range(N))
+                stiffness_3_str = ', '.join(str(self.stiffness_3[i]) for i in range(N))
+                base_str += f',\n\t{stiffness_1_str},\n\t{stiffness_2_str},\n\t{stiffness_3_str}'
+            else:
+                raise ValueError("Unsupported size of stiffness vector")
+        else:
+            raise TypeError("Invalid type for stiffness values")
+        return base_str
 
 
 class InverseSquareElastic(ConstitutiveLaw):
@@ -3948,6 +3964,76 @@ class InverseSquareElastic(ConstitutiveLaw):
     
     def __str__(self):
         return f'{self.const_law_header()}, {self.stiffness}, {self.ref_length}'
+    
+class LogElastic(ConstitutiveLaw):
+    """
+    Logarithmic elastic constitutive law
+    """
+
+    law_type: ConstitutiveLaw.LawType
+    stiffness: Union[float, MBVar]
+
+    def name(self) -> ConstitutiveLaw.LawType:
+        return self.law_type
+
+    def const_law_name(self) -> str:
+        return 'log elastic'
+
+    def __str__(self):
+        return f'{self.const_law_header()}, {self.stiffness}'
+
+class LinearElasticBistop(ConstitutiveLaw):
+    """
+    Linear elastic bistop constitutive law
+    """
+
+    law_type: ConstitutiveLaw.LawType
+    stiffness: Union[float, MBVar, List[List[Union[float, MBVar]]]]
+    initial_status: Optional[Union[bool, str]]
+    activating_condition: DriveCaller 
+    deactivating_condition: DriveCaller
+
+    def name(self) -> ConstitutiveLaw.LawType:
+        return self.law_type
+
+    def const_law_name(self) -> str:
+        return 'linear elastic bistop'
+
+    # TODO: Ensure the string representation is correct
+    def __str__(self):
+        base_str = f'{self.const_law_header()}'
+        if isinstance(self.stiffness, (float, MBVar)):
+            base_str += f', {self.stiffness}'
+        elif isinstance(self.stiffness, list):
+            N = len(self.stiffness)
+            if N == 1:
+                base_str += f', {self.stiffness[0][0]}'
+            elif N == 3 or N == 6:
+                matrix_str = ''
+                for i in range(N):
+                    row_str = ', '.join(str(self.stiffness[i][j]) for j in range(N))
+                    matrix_str += f',\n\t{row_str}'
+                base_str += f'{matrix_str}'
+            else:
+                raise ValueError("Unsupported size of stiffness matrix")
+        else:
+            raise TypeError("Invalid type for stiffness matrix")
+        
+        if self.initial_status is not None:
+            base_str += f',\n\tinitial status, {self.initial_status},'
+
+        base_str += '\n\t# activation condition drive'
+        if self.activation_condition.idx is None:
+            base_str += f'\n\t{self.activation_condition},'
+        else:
+            base_str += f'\n\treference, {self.activation_condition.idx},'
+        base_str += '\n\t# activation condition drive'
+        if self.deactivating_condition.idx is None:
+            base_str += f'\n\t{self.deactivating_condition},'
+        else:
+            base_str += f'\n\treference, {self.deactivating_condition.idx}'
+
+        return base_str
 
 class DoubleLinearElastic(ConstitutiveLaw):
     """
