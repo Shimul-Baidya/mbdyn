@@ -3792,6 +3792,9 @@ class ConstitutiveLaw(MBEntity):
     order to understand what the input and the output parameters are supposed to be.
     """
 
+    class Config:
+        arbitrary_types_allowed = True
+
     class LawType(str, Enum):
         SCALAR_ISOTROPIC_LAW = "scalar isotropic law"
         D3_ISOTROPIC_LAW = "3D isotropic law"
@@ -4089,11 +4092,46 @@ class LinearViscous(ConstitutiveLaw):
         return self.law_type
     
     def const_law_name(self) -> str:
-        return 'linear viscous'
+        if self.dim == 1:
+            return 'linear viscous'
+        else:
+            return 'linear viscous isotropic'
 
     def __str__(self):
         return f'{self.const_law_header()}, {self.viscosity}'
+
+class LinearViscousGeneric(ConstitutiveLaw):
+    """
+    Linear viscous generic constitutive law
+    """
+
+    law_type: ConstitutiveLaw.LawType
+    viscosity: Union[float, MBVar, List[List[Union[float, MBVar]]]]
+
+    def name(self) -> ConstitutiveLaw.LawType:
+        return self.law_type
     
+    def const_law_name(self) -> str:
+        return 'linear viscous generic'
+
+    def __str__(self):
+        if isinstance(self.viscosity, (float, MBVar)):
+            return f'{self.const_law_header()}, {self.viscosity}'
+        elif isinstance(self.viscosity, list):
+            N = len(self.viscosity)
+            if N == 1:
+                return f'{self.const_law_header()}, {self.viscosity[0][0]}'
+            elif N == 3 or N == 6:
+                matrix_str = ''
+                for i in range(N):
+                    row_str = ', '.join(str(self.viscosity[i][j]) for j in range(N))
+                    matrix_str += f',\n\t{row_str}'
+                return f'{self.const_law_header()}{matrix_str}'
+            else:
+                raise ValueError("Unsupported size of viscosity matrix")
+        else:
+            raise TypeError("Invalid type for viscosity matrix")
+ 
 class LinearViscoelastic(ConstitutiveLaw):
     """
     Linear viscoelastic constitutive law
@@ -4102,7 +4140,7 @@ class LinearViscoelastic(ConstitutiveLaw):
     law_type: ConstitutiveLaw.LawType
     stiffness: Union[MBVar, float]
 
-    viscosity: Optional[Union[MBVar, float]]
+    viscosity: Union[MBVar, float]
     """The viscosity coefficient"""
 
     factor: Optional[Union[MBVar, float]]
@@ -4112,7 +4150,10 @@ class LinearViscoelastic(ConstitutiveLaw):
         return self.law_type
     
     def const_law_name(self) -> str:
-        return 'linear viscoelastic'
+        if self.dim == 1:
+            return 'linear viscoelastic'
+        else:
+            return 'linear viscoelastic isotropic'
 
     def __str__(self):
         if self.viscosity is not None:
@@ -4121,7 +4162,225 @@ class LinearViscoelastic(ConstitutiveLaw):
             return f'{self.const_law_header()}, {self.stiffness}, proportional, {self.factor}'
         else:
             raise ValueError("Either viscosity or factor must be provided for Linear viscoelastic law")
+        
+class LinearViscoelasticGeneric(ConstitutiveLaw):
+    """
+    Linear viscoelastic generic constitutive law
+    """
 
+    law_type: ConstitutiveLaw.LawType
+    stiffness: Union[List[List[Union[float, MBVar]]]]
+    viscosity: Optional[Union[List[List[Union[float, MBVar]]]]]
+    factor: Optional[Union[float, MBVar]] = None
+
+    def name(self) -> ConstitutiveLaw.LawType:
+        return self.law_type
+    
+    def const_law_name(self) -> str:
+        return 'linear viscoelastic generic'
+    
+    def __str__(self):
+        base_str = f'{self.const_law_header()}'
+        if isinstance(self.stiffness, (float, MBVar)):
+            base_str += f', {self.stiffness}'
+        elif isinstance(self.stiffness, list):
+            N = len(self.stiffness)
+            if N == 1:
+                base_str += f', {self.stiffness[0][0]}'
+            elif N == 3 or N == 6:
+                matrix_str = ''
+                for i in range(N):
+                    row_str = ', '.join(str(self.stiffness[i][j]) for j in range(N))
+                    matrix_str += f',\n\t{row_str}'
+                base_str += f'{matrix_str}'
+            else:
+                raise ValueError("Unsupported size of stiffness matrix")
+        else:
+            raise TypeError("Invalid type for stiffness matrix")
+        if self.viscosity is not None:
+            if isinstance(self.viscosity, (float, MBVar)):
+                base_str += f', {self.viscosity}'
+            elif isinstance(self.viscosity, list):
+                N = len(self.viscosity)
+                if N == 1:
+                    base_str += f', {self.viscosity[0][0]}'
+                elif N == 3 or N == 6:
+                    matrix_str = ''
+                    for i in range(N):
+                        row_str = ', '.join(str(self.viscosity[i][j]) for j in range(N))
+                        matrix_str += f',\n\t{row_str}'
+                    base_str += f',\n{matrix_str}'
+                else:
+                    raise ValueError("Unsupported size of viscosity matrix")
+            else:
+                raise TypeError("Invalid type for viscosity matrix")
+        elif self.factor is not None:
+            base_str += f', proportional, {self.factor}'
+        else:
+            raise ValueError("Either viscosity or factor must be provided")
+        return base_str
+    
+class LinearTimeVariantViscoelasticGeneric(ConstitutiveLaw):
+    """
+    Linear time variant viscoelastic generic constitutive law
+    """
+
+    law_type: ConstitutiveLaw.LawType
+    stiffness: Union[float, MBVar, List[List[Union[float, MBVar]]]]
+    stiffness_scale: DriveCaller
+    viscosity: Optional[Union[float, MBVar, List[List[Union[float, MBVar]]]]] = None
+    factor: Optional[Union[float, MBVar]] = None
+    viscosity_scale: DriveCaller
+
+    def name(self) -> ConstitutiveLaw.LawType:
+        return self.law_type
+
+    def const_law_name(self) -> str:
+        return 'linear time variant viscoelastic generic'
+
+    def __str__(self):
+        base_str = f'{self.const_law_header()}'
+        
+        # String representation for stiffness
+        if isinstance(self.stiffness, (float, MBVar)):
+            base_str += f', {self.stiffness}'
+        elif isinstance(self.stiffness, list):
+            N = len(self.stiffness)
+            if N == 1:
+                base_str += f', {self.stiffness[0][0]}'
+            elif N == 3 or N == 6:
+                matrix_str = ''
+                for i in range(N):
+                    row_str = ', '.join(str(self.stiffness[i][j]) for j in range(N))
+                    matrix_str += f',\n\t{row_str}'
+                base_str += f'{matrix_str}'
+            else:
+                raise ValueError("Unsupported size of stiffness matrix")
+        else:
+            raise TypeError("Invalid type for stiffness matrix")
+
+        # String representation for stiffness scale
+        if self.stiffness_scale.idx is None:
+            base_str += f',\n\t{self.stiffness_scale},'
+        else:
+            base_str += f',\n\treference, {self.stiffness_scale.idx},'
+        
+        # String representation for viscosity
+        if self.viscosity is not None:
+            if isinstance(self.viscosity, (float, MBVar)):
+                base_str += f', {self.viscosity}'
+            elif isinstance(self.viscosity, list):
+                N = len(self.viscosity)
+                if N == 1:
+                    base_str += f', {self.viscosity[0][0]}'
+                elif N == 3 or N == 6:
+                    matrix_str = ''
+                    for i in range(N):
+                        row_str = ', '.join(str(self.viscosity[i][j]) for j in range(N))
+                        matrix_str += f',\n\t{row_str}'
+                    base_str += f',\n{matrix_str}'
+                else:
+                    raise ValueError("Unsupported size of viscosity matrix")
+            else:
+                raise TypeError("Invalid type for viscosity matrix")
+        elif self.factor is not None:
+            base_str += f', proportional, {self.factor}'
+        else:
+            raise ValueError("Either viscosity or factor must be provided")
+
+        # String representation for viscosity scale
+        if self.viscosity_scale.idx is None:
+            base_str += f',\n\t{self.viscosity_scale}'
+        else:
+            base_str += f',\n\treference, {self.viscosity_scale.idx}'
+
+        return base_str
+
+class LinearViscoelasticGenericAxialTorsionCoupling(ConstitutiveLaw):
+    """
+    Linear viscoelastic generic axial torsion coupling constitutive law
+    """
+
+    law_type: ConstitutiveLaw.LawType
+    stiffness: List[List[Union[float, MBVar]]]
+    viscosity: Optional[List[List[Union[float, MBVar]]]] = None
+    factor: Optional[Union[float, MBVar]] = None
+    coupling_coef: float
+
+    def name(self) -> ConstitutiveLaw.LawType:
+        return self.law_type
+
+    def const_law_name(self) -> str:
+        return 'linear viscoelastic generic axial torsion coupling'
+
+    def __str__(self):
+        base_str = f'{self.const_law_header()}'
+        
+        # String representation for stiffness
+        if isinstance(self.stiffness, list):
+            N = len(self.stiffness)
+            if N != 6:
+                raise ValueError("Stiffness matrix must be 6x1")
+            matrix_str = ', '.join(str(self.stiffness[i][0]) for i in range(N))
+            base_str += f',\n\t{matrix_str}'
+        else:
+            raise TypeError("Invalid type for stiffness matrix")
+
+        # String representation for viscosity or factor
+        if self.viscosity is not None:
+            if isinstance(self.viscosity, list):
+                N = len(self.viscosity)
+                if N != 6:
+                    raise ValueError("Viscosity matrix must be 6x1")
+                matrix_str = ', '.join(str(self.viscosity[i][0]) for i in range(N))
+                base_str += f',\n\t{matrix_str}'
+            else:
+                raise TypeError("Invalid type for viscosity matrix")
+        elif self.factor is not None:
+            base_str += f', proportional, {self.factor}'
+        else:
+            raise ValueError("Either viscosity or factor must be provided")
+
+        # Adding the coupling coefficient
+        base_str += f',\n\t{self.coupling_coef}'
+
+        return base_str
+
+class CubicViscoelasticGeneric(ConstitutiveLaw):
+    """
+    Cubic viscoelastic generic constitutive law
+    """
+
+    law_type: ConstitutiveLaw.LawType
+    stiffness_1: Union[float, MBVar, List[Union[float, MBVar]]]
+    stiffness_2: Union[float, MBVar, List[Union[float, MBVar]]]
+    stiffness_3: Union[float, MBVar, List[Union[float, MBVar]]]
+    viscosity: Union[float, MBVar, List[Union[float, MBVar]]]
+
+    def name(self) -> ConstitutiveLaw.LawType:
+        return self.law_type
+    
+    def const_law_name(self) -> str:
+        return 'cubic viscoelastic generic'
+
+    def __str__(self):
+        base_str = f'{self.const_law_header()}'
+        if isinstance(self.stiffness_1, (float, MBVar)):
+            base_str += f', {self.stiffness_1}, {self.stiffness_2}, {self.stiffness_3}, {self.viscosity}'
+        elif isinstance(self.stiffness_1, list):
+            N = len(self.stiffness_1)
+            if N == 3:
+                stiffness_1_str = ', '.join(str(self.stiffness_1[i]) for i in range(N))
+                stiffness_2_str = ', '.join(str(self.stiffness_2[i]) for i in range(N))
+                stiffness_3_str = ', '.join(str(self.stiffness_3[i]) for i in range(N))
+                viscosity_str = ', '.join(str(self.viscosity[i]) for i in range(N))
+                base_str += f',\n\t{stiffness_1_str},\n\t{stiffness_2_str},\n\t{stiffness_3_str},\n\t{viscosity_str}'
+            else:
+                raise ValueError("Unsupported size of stiffness and viscosity vectors")
+        else:
+            raise TypeError("Invalid type for stiffness and viscosity values")
+        return base_str
+    
 class DoubleLinearViscoelastic(ConstitutiveLaw):
     """
     Double linear viscoelastic constitutive law
