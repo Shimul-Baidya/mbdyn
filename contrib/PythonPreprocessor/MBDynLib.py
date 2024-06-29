@@ -4603,7 +4603,126 @@ class SymbolicViscoelastic(ConstitutiveLaw):
         base_str += f',\n\tepsilon prime, {epsilon_prime_str}'
         base_str += f',\n\texpression, {expression_str}'
         return base_str
+    
+class AnnElastic(ConstitutiveLaw):
+    """
+    Ann elastic constitutive law
+    """
 
+    law_type: ConstitutiveLaw.LawType
+    file_name: str
+
+    def name(self) -> ConstitutiveLaw.LawType:
+        return self.law_type
+
+    def const_law_name(self) -> str:
+        return 'ann elastic'
+
+    def __str__(self):
+        base_str = f'{self.const_law_header()}'
+        base_str += f',\n\t"{self.file_name}"'
+        return base_str
+
+class AnnViscoelastic(ConstitutiveLaw):
+    """
+    Ann viscoelastic constitutive law
+    """
+
+    law_type: ConstitutiveLaw.LawType
+    file_name: str
+
+    def name(self) -> ConstitutiveLaw.LawType:
+        return self.law_type
+
+    def const_law_name(self) -> str:
+        return 'ann viscoelastic'
+
+    def __str__(self):
+        base_str = f'{self.const_law_header()}'
+        base_str += f',\n\t"{self.file_name}"'
+        return base_str
+
+class ArrayConstitutiveLaw(ConstitutiveLaw):
+    """
+    Array constitutive law wrapper linearly combines the output of multiple constitutive laws.
+    """
+
+    law_type: ConstitutiveLaw.LawType
+    number: int
+    wrapped_const_laws: List[ConstitutiveLaw]
+
+    def name(self) -> ConstitutiveLaw.LawType:
+        return self.law_type
+
+    def const_law_name(self) -> str:
+        return 'array'
+
+    def __str__(self):
+        if self.number == 1:
+            return str(self.wrapped_const_laws[0])
+
+        base_str = f'{self.const_law_header()}, {self.number}'
+        for law in self.wrapped_const_laws:
+            base_str += f',\n\t{str(law)}'
+        return base_str
+
+class BistopConstitutiveLaw(ConstitutiveLaw):
+    """
+    Bistop wrapper applies the logic of the bistop to a generic underlying constitutive law.
+    """
+
+    law_type: ConstitutiveLaw.LawType
+    initial_status: Optional[Union[bool, str]]
+    activating_condition: DriveCaller
+    deactivating_condition: DriveCaller
+    wrapped_const_law: ConstitutiveLaw
+
+    def name(self) -> ConstitutiveLaw.LawType:
+        return self.law_type
+
+    def const_law_name(self) -> str:
+        return 'bistop'
+
+    def __str__(self):
+        base_str = f'{self.const_law_header()}'
+        if self.initial_status is not None:
+            base_str += f',\n\tinitial status, {self.initial_status},'
+
+        base_str += '\n\t# activation condition drive'
+        if self.activating_condition.idx is None:
+            base_str += f'\n\t{self.activating_condition},'
+        else:
+            base_str += f'\n\treference, {self.activating_condition.idx},'
+        base_str += '\n\t# deactivation condition drive'
+        if self.deactivating_condition.idx is None:
+            base_str += f'\n\t{self.deactivating_condition},'
+        else:
+            base_str += f'\n\treference, {self.deactivating_condition.idx},'
+
+        base_str += f'\n\t{str(self.wrapped_const_law)}'
+        return base_str
+
+class InvariantAngularWrapper(ConstitutiveLaw):
+    """
+    Invariant angular wrapper for 3D constitutive laws used within the “attached” variant of the deformable hinge joint.
+    """
+
+    law_type: ConstitutiveLaw.LawType
+    xi: Union[float, int, MBVar]
+    wrapped_const_law: ConstitutiveLaw
+
+    def name(self) -> ConstitutiveLaw.LawType:
+        return self.law_type
+
+    def const_law_name(self) -> str:
+        return 'invariant angular'
+
+    def __str__(self):
+        base_str = f'{self.const_law_header()}'
+        base_str += f',\n\t{self.xi}'
+        base_str += f',\n\t{str(self.wrapped_const_law)}'
+        return base_str
+    
 
 class Data:
     problem_type = ('INITIAL VALUE', 'INVERSE DYNAMICS')
