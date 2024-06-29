@@ -3991,7 +3991,7 @@ class LinearElasticBistop(ConstitutiveLaw):
     """
 
     law_type: ConstitutiveLaw.LawType
-    stiffness: Union[float, MBVar, List[List[Union[float, MBVar]]]]
+    stiffness: Union[float, MBVar]
     initial_status: Optional[Union[bool, str]]
     activating_condition: DriveCaller 
     deactivating_condition: DriveCaller
@@ -4004,23 +4004,7 @@ class LinearElasticBistop(ConstitutiveLaw):
 
     # TODO: Ensure the string representation is correct
     def __str__(self):
-        base_str = f'{self.const_law_header()}'
-        if isinstance(self.stiffness, (float, MBVar)):
-            base_str += f', {self.stiffness}'
-        elif isinstance(self.stiffness, list):
-            N = len(self.stiffness)
-            if N == 1:
-                base_str += f', {self.stiffness[0][0]}'
-            elif N == 3 or N == 6:
-                matrix_str = ''
-                for i in range(N):
-                    row_str = ', '.join(str(self.stiffness[i][j]) for j in range(N))
-                    matrix_str += f',\n\t{row_str}'
-                base_str += f'{matrix_str}'
-            else:
-                raise ValueError("Unsupported size of stiffness matrix")
-        else:
-            raise TypeError("Invalid type for stiffness matrix")
+        base_str = f'{self.const_law_header()}, {self.stiffness}'
         
         if self.initial_status is not None:
             base_str += f',\n\tinitial status, {self.initial_status},'
@@ -4432,6 +4416,193 @@ class TurbulentViscoelastic(ConstitutiveLaw):
                 base_str += f', {self.linear_viscosity}'
         return base_str
 
+class LinearViscoelasticBistop(ConstitutiveLaw):
+    """
+    Linear viscoelastic bistop constitutive law
+    """
+
+    law_type: ConstitutiveLaw.LawType
+    stiffness: Union[float, MBVar]
+    viscosity: Union[float, MBVar]
+    initial_status: Optional[Union[bool, str]] = None
+    activating_condition: DriveCaller
+    deactivating_condition: DriveCaller
+
+    def name(self) -> ConstitutiveLaw.LawType:
+        return self.law_type
+
+    def const_law_name(self) -> str:
+        return 'linear viscoelastic bistop'
+
+    def __str__(self):
+        base_str = f'{self.const_law_header()}, {self.stiffness}, {self.viscosity}'
+        if self.initial_status is not None:
+            base_str += f',\n\tinitial status, {self.initial_status},'
+        base_str += '\n\t# activation condition drive'
+        if self.activating_condition.idx is None:
+            base_str += f'\n\t{self.activating_condition},'
+        else:
+            base_str += f'\n\treference, {self.activating_condition.idx},'
+        base_str += '\n\t# deactivation condition drive'
+        if self.deactivating_condition.idx is None:
+            base_str += f'\n\t{self.deactivating_condition}'
+        else:
+            base_str += f'\n\treference, {self.deactivating_condition.idx}'
+        return base_str
+
+class SymbolicElastic(ConstitutiveLaw):
+    """
+    Symbolic elastic constitutive law
+    """
+
+    law_type: ConstitutiveLaw.LawType
+    epsilon: Union[str, List[str]]
+    expression: Union[str, List[str]]
+
+    def name(self) -> ConstitutiveLaw.LawType:
+        return self.law_type
+
+    def const_law_name(self) -> str:
+        return 'symbolic elastic'
+
+    def __str__(self):
+        base_str = f'{self.const_law_header()}'
+
+        if isinstance(self.epsilon, str):
+            epsilon_list = [self.epsilon]
+        else:
+            epsilon_list = self.epsilons
+        if isinstance(self.expressions, str):
+            expression_list = [self.expression]
+        else:
+            expression_list = self.expression
+        if len(epsilon_list) != len(expression_list):
+            raise ValueError("The number of epsilons must match the number of expressions")
+        
+        epsilon_str = ', '.join(f'"{epsilon}"' for epsilon in epsilon_list)
+        base_str += f',\n\tepsilon, {epsilon_str}'
+        expression_str = ', '.join(f'"{expression}"' for expression in expression_list)
+        base_str += f',\n\texpression, {expression_str}'
+        return base_str
+
+class SymbolicViscous(ConstitutiveLaw):
+    """
+    Symbolic viscous constitutive law
+    """
+
+    law_type: ConstitutiveLaw.LawType
+    epsilon_prime: Union[str, List[str]]
+    expression: Union[str, List[str]]
+
+    def name(self) -> ConstitutiveLaw.LawType:
+        return self.law_type
+
+    def const_law_name(self) -> str:
+        return 'symbolic viscous'
+
+    def __str__(self):
+        base_str = f'{self.const_law_header()}'
+
+        if isinstance(self.epsilon_prime, str):
+            epsilon_prime_list = [self.epsilon_prime]
+        else:
+            epsilon_prime_list = self.epsilon_prime
+        if isinstance(self.expression, str):
+            expression_list = [self.expression]
+        else:
+            expression_list = self.expression
+        if len(epsilon_prime_list) != len(expression_list):
+            raise ValueError("The number of epsilon_primes must match the number of expressions")
+
+        epsilon_prime_str = ', '.join(f'"{epsilon_prime}"' for epsilon_prime in epsilon_prime_list)
+        base_str += f',\n\tepsilon prime, {epsilon_prime_str}'
+        expression_str = ', '.join(f'"{expression}"' for expression in expression_list)
+        base_str += f',\n\texpression, {expression_str}'
+        return base_str
+    
+class SymbolicViscoelastic(ConstitutiveLaw):
+    """
+    Symbolic viscoelastic constitutive law
+    """
+
+    law_type: ConstitutiveLaw.LawType
+    epsilon: Union[str, List[str]]
+    epsilon_prime: Union[str, List[str]]
+    expression: Union[str, List[str]]
+
+    def name(self) -> ConstitutiveLaw.LawType:
+        return self.law_type
+
+    def const_law_name(self) -> str:
+        return 'symbolic viscoelastic'
+
+    def __str__(self):
+        base_str = f'{self.const_law_header()}'
+
+        if isinstance(self.epsilon, str):
+            epsilon_list = [self.epsilon]
+        else:
+            epsilon_list = self.epsilon
+        if isinstance(self.epsilon_prime, str):
+            epsilon_prime_list = [self.epsilon_prime]
+        else:
+            epsilon_prime_list = self.epsilon_prime
+        if isinstance(self.expression, str):
+            expression_list = [self.expression]
+        else:
+            expression_list = self.expression
+        if len(epsilon_list) != len(epsilon_prime_list) or len(epsilon_list) != len(expression_list):
+            raise ValueError("The number of epsilons, epsilon_primes, and expressions must match")
+
+        epsilon_str = ', '.join(f'"{epsilon}"' for epsilon in epsilon_list)
+        epsilon_prime_str = ', '.join(f'"{epsilon_prime}"' for epsilon_prime in epsilon_prime_list)
+        expression_str = ', '.join(f'"{expression}"' for expression in expression_list)
+        base_str += f',\n\tepsilon, {epsilon_str}'
+        base_str += f',\n\tepsilon prime, {epsilon_prime_str}'
+        base_str += f',\n\texpression, {expression_str}'
+        return base_str
+    
+class SymbolicViscoelastic(ConstitutiveLaw):
+    """
+    Symbolic viscoelastic constitutive law
+    """
+
+    law_type: ConstitutiveLaw.LawType
+    epsilon: Union[str, List[str]]
+    epsilon_prime: Union[str, List[str]]
+    expression: Union[str, List[str]]
+
+    def name(self) -> ConstitutiveLaw.LawType:
+        return self.law_type
+
+    def const_law_name(self) -> str:
+        return 'symbolic viscoelastic'
+
+    def __str__(self):
+        base_str = f'{self.const_law_header()}'
+
+        if isinstance(self.epsilon, str):
+            epsilon_list = [self.epsilon]
+        else:
+            epsilon_list = self.epsilon
+        if isinstance(self.epsilon_prime, str):
+            epsilon_prime_list = [self.epsilon_prime]
+        else:
+            epsilon_prime_list = self.epsilon_prime
+        if isinstance(self.expression, str):
+            expression_list = [self.expression]
+        else:
+            expression_list = self.expression
+        if len(epsilon_list) != len(epsilon_prime_list) or len(epsilon_list) != len(expression_list):
+            raise ValueError("The number of epsilons, epsilon_primes, and expressions must match")
+
+        epsilon_str = ', '.join(f'"{epsilon}"' for epsilon in epsilon_list)
+        epsilon_prime_str = ', '.join(f'"{epsilon_prime}"' for epsilon_prime in epsilon_prime_list)
+        expression_str = ', '.join(f'"{expression}"' for expression in expression_list)
+        base_str += f',\n\tepsilon, {epsilon_str}'
+        base_str += f',\n\tepsilon prime, {epsilon_prime_str}'
+        base_str += f',\n\texpression, {expression_str}'
+        return base_str
 
 
 class Data:
