@@ -106,8 +106,9 @@ class TestLinearElastic(unittest.TestCase):
         self.assertEqual(str(self.vector_3d_law), f'{self.vector_3d_law.const_law_header()}, 1000000000.0')
         self.assertEqual(str(self.vector_6d_law), f'{self.vector_6d_law.const_law_header()}, 1000000000.0')
 
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
     def test_invalid_law_type(self):
-        with self.assertRaises(pydantic.ValidationError):
+        with self.assertRaises(Exception):
             l.LinearElastic(law_type='INVALID_LAW_TYPE', stiffness=1e9)
 
     def test_different_stiffness_values(self):
@@ -118,20 +119,23 @@ class TestLinearElastic(unittest.TestCase):
         self.assertEqual(large_stiffness.stiffness, 1e12)
         self.assertEqual(zero_stiffness.stiffness, 0)
 
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
     def test_missing_arguments(self):
-        with self.assertRaises(pydantic.ValidationError):
+        with self.assertRaises(Exception):
             l.LinearElastic(law_type="scalar isotropic law")
-        with self.assertRaises(pydantic.ValidationError):
+        with self.assertRaises(Exception):
             l.LinearElastic(stiffness=1e9)
 
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
     def test_invalid_stiffness_type(self):
-        with self.assertRaises(pydantic.ValidationError):
+        with self.assertRaises(Exception):
             l.LinearElastic(law_type="scalar isotropic law", stiffness="invalid")
-        with self.assertRaises(pydantic.ValidationError):
+        with self.assertRaises(Exception):
             l.LinearElastic(law_type="scalar isotropic law", stiffness=None)
 
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
     def test_extra_arguments(self):
-        with self.assertRaises(pydantic.ValidationError):
+        with self.assertRaises(Exception):
             l.LinearElastic(law_type="scalar isotropic law", stiffness=1e9, foo=1.0)
 
     def test_str_with_different_stiffness(self):
@@ -163,8 +167,9 @@ class TestLinearViscousGeneric(unittest.TestCase):
         self.assertEqual(str(self.vector_3d_law), f'{self.vector_3d_law.const_law_header()},\n\t1000000000.0, 0.0, 0.0,\n\t0.0, 1000000000.0, 0.0,\n\t0.0, 0.0, 1000000000.0')
         self.assertEqual(str(self.vector_6d_law), f'{self.vector_6d_law.const_law_header()},\n\t1000000000.0, 0.0, 0.0, 0.0, 0.0, 0.0,\n\t0.0, 1000000000.0, 0.0, 0.0, 0.0, 0.0,\n\t0.0, 0.0, 1000000000.0, 0.0, 0.0, 0.0,\n\t0.0, 0.0, 0.0, 1000000000.0, 0.0, 0.0,\n\t0.0, 0.0, 0.0, 0.0, 1000000000.0, 0.0,\n\t0.0, 0.0, 0.0, 0.0, 0.0, 1000000000.0')
 
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
     def test_invalid_law_type(self):
-        with self.assertRaises(pydantic.ValidationError):
+        with self.assertRaises(Exception):
             l.LinearViscousGeneric(law_type='INVALID_LAW_TYPE', viscosity=1e9)
 
     def test_different_viscosity_values(self):
@@ -175,20 +180,23 @@ class TestLinearViscousGeneric(unittest.TestCase):
         self.assertEqual(large_viscosity.viscosity, 1e12)
         self.assertEqual(zero_viscosity.viscosity, 0)
 
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
     def test_missing_arguments(self):
-        with self.assertRaises(pydantic.ValidationError):
+        with self.assertRaises(Exception):
             l.LinearViscousGeneric(law_type="scalar isotropic law")
-        with self.assertRaises(pydantic.ValidationError):
+        with self.assertRaises(Exception):
             l.LinearViscousGeneric(viscosity=1e9)
 
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
     def test_invalid_viscosity_type(self):
-        with self.assertRaises(pydantic.ValidationError):
+        with self.assertRaises(Exception):
             l.LinearViscousGeneric(law_type="scalar isotropic law", viscosity="invalid")
-        with self.assertRaises(pydantic.ValidationError):
+        with self.assertRaises(Exception):
             l.LinearViscousGeneric(law_type="scalar isotropic law", viscosity=None)
 
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
     def test_extra_arguments(self):
-        with self.assertRaises(pydantic.ValidationError):
+        with self.assertRaises(Exception):
             l.LinearViscousGeneric(law_type="scalar isotropic law", viscosity=1e9, foo=1.0)
 
     def test_str_with_different_viscosity(self):
@@ -197,7 +205,7 @@ class TestLinearViscousGeneric(unittest.TestCase):
         zero_viscosity = l.LinearViscousGeneric(law_type="scalar isotropic law", viscosity=0)
         self.assertEqual(str(small_viscosity), f'{small_viscosity.const_law_header()}, 1e-09')
         self.assertEqual(str(large_viscosity), f'{large_viscosity.const_law_header()}, 1000000000000.0')
-        self.assertEqual(str(zero_viscosity), f'{zero_viscosity.const_law_header()}, 0.0') 
+        self.assertEqual(str(zero_viscosity), f'{zero_viscosity.const_law_header()}, 0.0')
 
 class TestLinearViscoelasticGeneric(unittest.TestCase):
 

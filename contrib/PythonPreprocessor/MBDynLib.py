@@ -4154,7 +4154,7 @@ class LinearViscoelasticGeneric(ConstitutiveLaw):
 
     law_type: ConstitutiveLaw.LawType
     stiffness: Union[List[List[Union[float, MBVar]]]]
-    viscosity: Optional[Union[List[List[Union[float, MBVar]]]]]
+    viscosity: Optional[Union[List[List[Union[float, MBVar]]]]] = None
     factor: Optional[Union[float, MBVar]] = None
 
     def name(self) -> ConstitutiveLaw.LawType:
@@ -4203,7 +4203,7 @@ class LinearViscoelasticGeneric(ConstitutiveLaw):
         else:
             raise ValueError("Either viscosity or factor must be provided")
         return base_str
-    
+   
 class LinearTimeVariantViscoelasticGeneric(ConstitutiveLaw):
     """
     Linear time variant viscoelastic generic constitutive law
@@ -4722,7 +4722,106 @@ class InvariantAngularWrapper(ConstitutiveLaw):
         base_str += f',\n\t{self.xi}'
         base_str += f',\n\t{str(self.wrapped_const_law)}'
         return base_str
+
+class FileDriver(MBEntity):
+    """
+    Abstract class for file drivers. The file drivers are defined by the statement:
+    file : <file_arglist> ;
+    A comprehensive family of file drivers is available.
+    """
     
+   
+
+    idx: Union[MBVar, int]
+    """Index of this file driver"""
+
+    @abstractmethod
+    def driver_type(self) -> str:
+        """Every file driver must have a type"""
+        pass
+
+    def file_header(self) -> str:
+        """Common syntax for start of any file driver"""
+        return f'file: {self.label()}, {self.driver_type()}'
+    
+class FixedStep(FileDriver):
+    """
+    Fixed Step file driver
+    """
+
+    class Config:
+        arbitrary_types_allowed = True
+    
+    class InterpolationType(str, Enum):
+        LINEAR = "linear"
+        CONST = "const"
+
+    class BailoutType(str, Enum):
+        NONE = "none"
+        UPPER = "upper"
+        LOWER = "lower"
+        ANY = "any"
+
+    class PadZeroesType(str, Enum):
+        YES = 'yes'
+        NO = 'no'
+    
+    steps_number: Union[int, MBVar, str]  # 'count' or specific number of steps
+    columns_number: Union[int, MBVar]
+    initial_time: Union[Number, MBVar, str]  # 'from file' or specific initial time
+    time_step: Union[Number, MBVar, str]  # 'from file' or specific time step
+    interpolation: Optional[InterpolationType]
+    pad_zeroes: Optional[PadZeroesType]
+    bailout: Optional[BailoutType]
+    file_name: str
+
+    def driver_type(self) -> str:
+        return "fixed step"
+    
+    def __str__(self):
+        base_str = f'{self.file_header()},\n\t'
+        base_str += f'{self.steps_number},\n\t'
+        base_str += f'{self.columns_number},\n\t'
+        base_str += f'initial time, {self.initial_time},\n\t'
+        base_str += f'time step, {self.time_step},\n\t'
+        if self.interpolation:
+            base_str += f'interpolation, {self.interpolation.value},\n\t'
+        if self.pad_zeroes and self.bailout:
+            raise ValueError("Cannot set both 'pad zeroes' to 'no' and 'bailout' at the same time")
+        if self.pad_zeroes:
+            base_str += f'pad zeroes, {self.pad_zeroes},\n\t'
+        elif self.bailout:
+            base_str += f'bailout, {self.bailout},\n\t'
+        base_str += f'"{self.file_name}"'
+        return base_str
+    
+class VariableStep(FixedStep):
+    """
+    Variable Step file driver
+    """
+    
+    channels_number: Union[int, MBVar]
+    interpolation: Optional[FixedStep.InterpolationType]
+    pad_zeroes: Optional[FixedStep.PadZeroesType]
+    bailout: Optional[FixedStep.BailoutType]
+    file_name: str
+
+    def driver_type(self) -> str:
+        return "variable step"
+    
+    def __str__(self):
+        base_str = f'{self.file_header()},\n\t'
+        base_str += f'{self.channels_number},\n\t'
+        if self.interpolation:
+            base_str += f'interpolation, {self.interpolation.value},\n\t'
+        if self.pad_zeroes and self.bailout:
+            raise ValueError("Cannot set both 'pad zeroes' to 'no' and 'bailout' at the same time")
+        if self.pad_zeroes:
+            base_str += f'pad zeroes, {self.pad_zeroes},\n\t'
+        elif self.bailout:
+            base_str += f'bailout, {self.bailout},\n\t'
+        base_str += f'"{self.file_name}"'
+        return base_str
 
 class Data:
     problem_type = ('INITIAL VALUE', 'INVERSE DYNAMICS')
