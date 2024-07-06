@@ -3803,10 +3803,7 @@ class ConstitutiveLaw(MBEntity):
     idx: Optional[Union[MBVar, int]] = None
     """Index of this constitutive law to reuse with references"""
 
-    @abstractmethod
-    def name(self) -> str:
-        """Every constitutive law class must have a name"""
-        pass
+    law_type: LawType
 
     @abstractmethod
     def const_law_name(self) -> str:
@@ -3816,7 +3813,7 @@ class ConstitutiveLaw(MBEntity):
     @property
     def dim(self) -> int:
         """Determine the dimensionality based on the constitutive law name"""
-        name = self.name()
+        name = self.law_type
         if name == "scalar isotropic law":
             return 1
         elif name == "3D isotropic law":
@@ -3829,7 +3826,7 @@ class ConstitutiveLaw(MBEntity):
     def const_law_header(self) -> str:
         """common syntax for start of any constitutive law"""
         if self.idx is not None:
-            return f'constitutive law: {self.idx}, name, "{self.name()}",' \
+            return f'constitutive law: {self.idx}, name, "{self.law_type}",' \
                    f'\n\t{self.dim()}, {self.const_law_name()}'
         else:
             return self.const_law_name()
@@ -3838,10 +3835,6 @@ class LinearElastic(ConstitutiveLaw):
     """
     Linear elastic constitutive law
     """
-
-    law_type: ConstitutiveLaw.LawType
-    def name(self) -> ConstitutiveLaw.LawType:
-        return self.law_type
         
     def const_law_name(self) -> str:
         if self.dim == 1:
@@ -3860,12 +3853,7 @@ class LinearElasticGeneric(ConstitutiveLaw):
     Linear elastic generic constitutive law
     """
 
-    law_type: ConstitutiveLaw.LawType
     stiffness: Union[float, MBVar, List[List[Union[float, MBVar]]]]
-
-
-    def name(self) -> ConstitutiveLaw.LawType:
-        return self.law_type
     
     def const_law_name(self) -> str:
         return 'linear elastic generic'
@@ -3893,12 +3881,8 @@ class LinearElasticGenericAxialTorsionCoupling(ConstitutiveLaw):
     Linear elastic generic axial torsion coupling constitutive law
     """
 
-    law_type: ConstitutiveLaw.LawType
     stiffness: Union[List[List[Union[float, MBVar]]]]
     coupling_coef: Union[float, MBVar]
-
-    def name(self) -> ConstitutiveLaw.LawType:
-        return self.law_type
 
     def const_law_name(self) -> str:
         return 'linear elastic generic axial torsion coupling'
@@ -3920,13 +3904,9 @@ class CubicElasticGeneric(ConstitutiveLaw):
     """
 
     ### TODO: Ensure this is the correct data type
-    law_type: ConstitutiveLaw.LawType
     stiffness_1: Union[float, MBVar, List[Union[float, MBVar]]]
     stiffness_2: Union[float, MBVar, List[Union[float, MBVar]]]
     stiffness_3: Union[float, MBVar, List[Union[float, MBVar]]]
-
-    def name(self) -> ConstitutiveLaw.LawType:
-        return self.law_type
     
     def const_law_name(self) -> str:
         return 'cubic elastic generic'
@@ -3955,12 +3935,8 @@ class InverseSquareElastic(ConstitutiveLaw):
     Inverse square elastic constitutive law
     """
     
-    law_type: ConstitutiveLaw.LawType
     stiffness: Union[MBVar, float]
     ref_length: Union[MBVar, float]
-
-    def name(self) -> ConstitutiveLaw.LawType:
-        return self.law_type
     
     def const_law_name(self) -> str:
         return 'inverse square elastic'
@@ -3973,11 +3949,7 @@ class LogElastic(ConstitutiveLaw):
     Logarithmic elastic constitutive law
     """
 
-    law_type: ConstitutiveLaw.LawType
     stiffness: Union[float, MBVar]
-
-    def name(self) -> ConstitutiveLaw.LawType:
-        return self.law_type
 
     def const_law_name(self) -> str:
         return 'log elastic'
@@ -3990,14 +3962,10 @@ class LinearElasticBistop(ConstitutiveLaw):
     Linear elastic bistop constitutive law
     """
 
-    law_type: ConstitutiveLaw.LawType
     stiffness: Union[float, MBVar]
     initial_status: Optional[Union[bool, str]]
     activating_condition: DriveCaller 
     deactivating_condition: DriveCaller
-
-    def name(self) -> ConstitutiveLaw.LawType:
-        return self.law_type
 
     def const_law_name(self) -> str:
         return 'linear elastic bistop'
@@ -4027,14 +3995,10 @@ class DoubleLinearElastic(ConstitutiveLaw):
     Double linear elastic constitutive law
     """
 
-    law_type: ConstitutiveLaw.LawType
     stiffness_1: Union[MBVar, float]
     upper_strain: Union[MBVar, float]
     lower_strain: Union[MBVar, float]
     stiffness_2: Union[MBVar, float]
-
-    def name(self) -> ConstitutiveLaw.LawType:
-        return self.law_type
     
     def const_law_name(self) -> str:
         return 'double linear elastic'
@@ -4047,13 +4011,9 @@ class IsotropicHardeningElastic(ConstitutiveLaw):
     Isotropic hardening elastic constitutive law
     """
 
-    law_type: ConstitutiveLaw.LawType
     stiffness: Union[MBVar, float]
     reference_strain: Union[MBVar, float]
     linear_stiffness: Optional[Union[MBVar, float]]
-
-    def name(self) -> ConstitutiveLaw.LawType:
-        return self.law_type
     
     def const_law_name(self) -> str:
         return 'isotropic hardening elastic'
@@ -4069,11 +4029,7 @@ class LinearViscous(ConstitutiveLaw):
     Linear viscous constitutive law
     """
 
-    law_type: ConstitutiveLaw.LawType
-    viscosity: Union[MBVar, float]
-
-    def name(self) -> ConstitutiveLaw.LawType:
-        return self.law_type
+    viscosity: Union[MBVar, float]    
     
     def const_law_name(self) -> str:
         if self.dim == 1:
@@ -4089,12 +4045,8 @@ class LinearViscousGeneric(ConstitutiveLaw):
     Linear viscous generic constitutive law
     """
 
-    law_type: ConstitutiveLaw.LawType
     viscosity: Union[float, MBVar, List[List[Union[float, MBVar]]]]
 
-    def name(self) -> ConstitutiveLaw.LawType:
-        return self.law_type
-    
     def const_law_name(self) -> str:
         return 'linear viscous generic'
 
@@ -4121,7 +4073,6 @@ class LinearViscoelastic(ConstitutiveLaw):
     Linear viscoelastic constitutive law
     """
 
-    law_type: ConstitutiveLaw.LawType
     stiffness: Union[MBVar, float]
 
     viscosity: Union[MBVar, float]
@@ -4129,9 +4080,6 @@ class LinearViscoelastic(ConstitutiveLaw):
 
     factor: Optional[Union[MBVar, float]]
     """Factor for proportional viscosity"""
-
-    def name(self) -> ConstitutiveLaw.LawType:
-        return self.law_type
     
     def const_law_name(self) -> str:
         if self.dim == 1:
@@ -4152,13 +4100,9 @@ class LinearViscoelasticGeneric(ConstitutiveLaw):
     Linear viscoelastic generic constitutive law
     """
 
-    law_type: ConstitutiveLaw.LawType
     stiffness: Union[List[List[Union[float, MBVar]]]]
     viscosity: Optional[Union[List[List[Union[float, MBVar]]]]] = None
     factor: Optional[Union[float, MBVar]] = None
-
-    def name(self) -> ConstitutiveLaw.LawType:
-        return self.law_type
     
     def const_law_name(self) -> str:
         return 'linear viscoelastic generic'
@@ -4209,15 +4153,11 @@ class LinearTimeVariantViscoelasticGeneric(ConstitutiveLaw):
     Linear time variant viscoelastic generic constitutive law
     """
 
-    law_type: ConstitutiveLaw.LawType
     stiffness: Union[float, MBVar, List[List[Union[float, MBVar]]]]
     stiffness_scale: DriveCaller
     viscosity: Optional[Union[float, MBVar, List[List[Union[float, MBVar]]]]] = None
     factor: Optional[Union[float, MBVar]] = None
     viscosity_scale: DriveCaller
-
-    def name(self) -> ConstitutiveLaw.LawType:
-        return self.law_type
 
     def const_law_name(self) -> str:
         return 'linear time variant viscoelastic generic'
@@ -4285,14 +4225,10 @@ class LinearViscoelasticGenericAxialTorsionCoupling(ConstitutiveLaw):
     Linear viscoelastic generic axial torsion coupling constitutive law
     """
 
-    law_type: ConstitutiveLaw.LawType
     stiffness: List[List[Union[float, MBVar]]]
     viscosity: Optional[List[List[Union[float, MBVar]]]] = None
     factor: Optional[Union[float, MBVar]] = None
     coupling_coef: float
-
-    def name(self) -> ConstitutiveLaw.LawType:
-        return self.law_type
 
     def const_law_name(self) -> str:
         return 'linear viscoelastic generic axial torsion coupling'
@@ -4335,15 +4271,11 @@ class CubicViscoelasticGeneric(ConstitutiveLaw):
     Cubic viscoelastic generic constitutive law
     """
 
-    law_type: ConstitutiveLaw.LawType
     stiffness_1: Union[float, MBVar, List[Union[float, MBVar]]]
     stiffness_2: Union[float, MBVar, List[Union[float, MBVar]]]
     stiffness_3: Union[float, MBVar, List[Union[float, MBVar]]]
     viscosity: Union[float, MBVar, List[Union[float, MBVar]]]
 
-    def name(self) -> ConstitutiveLaw.LawType:
-        return self.law_type
-    
     def const_law_name(self) -> str:
         return 'cubic viscoelastic generic'
 
@@ -4370,16 +4302,12 @@ class DoubleLinearViscoelastic(ConstitutiveLaw):
     Double linear viscoelastic constitutive law
     """
 
-    law_type: ConstitutiveLaw.LawType
     stiffness_1: Union[MBVar, float]
     upper_strain: Union[MBVar, float]
     lower_strain: Union[MBVar, float]
     stiffness_2: Union[MBVar, float]
     viscosity: Union[MBVar, float]
     viscosity_2: Optional[Union[MBVar, float]] = None
-
-    def name(self) -> ConstitutiveLaw.LawType:
-        return self.law_type
 
     def const_law_name(self) -> str:
         return 'double linear viscoelastic'
@@ -4396,14 +4324,10 @@ class TurbulentViscoelastic(ConstitutiveLaw):
     Turbulent viscoelastic constitutive law
     """
 
-    law_type: ConstitutiveLaw.LawType
     stiffness: Union[MBVar, float]
     parabolic_viscosity: Union[MBVar, float]
     threshold: Optional[Union[MBVar, float]] = None
     linear_viscosity: Optional[Union[MBVar, float]] = None
-
-    def name(self) -> ConstitutiveLaw.LawType:
-        return self.law_type
 
     def const_law_name(self) -> str:
         return 'turbulent viscoelastic'
@@ -4421,15 +4345,11 @@ class LinearViscoelasticBistop(ConstitutiveLaw):
     Linear viscoelastic bistop constitutive law
     """
 
-    law_type: ConstitutiveLaw.LawType
     stiffness: Union[float, MBVar]
     viscosity: Union[float, MBVar]
     initial_status: Optional[Union[bool, str]] = None
     activating_condition: DriveCaller
     deactivating_condition: DriveCaller
-
-    def name(self) -> ConstitutiveLaw.LawType:
-        return self.law_type
 
     def const_law_name(self) -> str:
         return 'linear viscoelastic bistop'
@@ -4455,12 +4375,8 @@ class SymbolicElastic(ConstitutiveLaw):
     Symbolic elastic constitutive law
     """
 
-    law_type: ConstitutiveLaw.LawType
     epsilon: Union[str, List[str]]
     expression: Union[str, List[str]]
-
-    def name(self) -> ConstitutiveLaw.LawType:
-        return self.law_type
 
     def const_law_name(self) -> str:
         return 'symbolic elastic'
@@ -4490,12 +4406,8 @@ class SymbolicViscous(ConstitutiveLaw):
     Symbolic viscous constitutive law
     """
 
-    law_type: ConstitutiveLaw.LawType
     epsilon_prime: Union[str, List[str]]
     expression: Union[str, List[str]]
-
-    def name(self) -> ConstitutiveLaw.LawType:
-        return self.law_type
 
     def const_law_name(self) -> str:
         return 'symbolic viscous'
@@ -4525,13 +4437,9 @@ class SymbolicViscoelastic(ConstitutiveLaw):
     Symbolic viscoelastic constitutive law
     """
 
-    law_type: ConstitutiveLaw.LawType
     epsilon: Union[str, List[str]]
     epsilon_prime: Union[str, List[str]]
     expression: Union[str, List[str]]
-
-    def name(self) -> ConstitutiveLaw.LawType:
-        return self.law_type
 
     def const_law_name(self) -> str:
         return 'symbolic viscoelastic'
@@ -4567,13 +4475,9 @@ class SymbolicViscoelastic(ConstitutiveLaw):
     Symbolic viscoelastic constitutive law
     """
 
-    law_type: ConstitutiveLaw.LawType
     epsilon: Union[str, List[str]]
     epsilon_prime: Union[str, List[str]]
     expression: Union[str, List[str]]
-
-    def name(self) -> ConstitutiveLaw.LawType:
-        return self.law_type
 
     def const_law_name(self) -> str:
         return 'symbolic viscoelastic'
@@ -4609,11 +4513,7 @@ class AnnElastic(ConstitutiveLaw):
     Ann elastic constitutive law
     """
 
-    law_type: ConstitutiveLaw.LawType
     file_name: str
-
-    def name(self) -> ConstitutiveLaw.LawType:
-        return self.law_type
 
     def const_law_name(self) -> str:
         return 'ann elastic'
@@ -4628,11 +4528,7 @@ class AnnViscoelastic(ConstitutiveLaw):
     Ann viscoelastic constitutive law
     """
 
-    law_type: ConstitutiveLaw.LawType
     file_name: str
-
-    def name(self) -> ConstitutiveLaw.LawType:
-        return self.law_type
 
     def const_law_name(self) -> str:
         return 'ann viscoelastic'
@@ -4647,12 +4543,8 @@ class ArrayConstitutiveLaw(ConstitutiveLaw):
     Array constitutive law wrapper linearly combines the output of multiple constitutive laws.
     """
 
-    law_type: ConstitutiveLaw.LawType
     number: int
     wrapped_const_laws: List[ConstitutiveLaw]
-
-    def name(self) -> ConstitutiveLaw.LawType:
-        return self.law_type
 
     def const_law_name(self) -> str:
         return 'array'
@@ -4671,14 +4563,10 @@ class BistopConstitutiveLaw(ConstitutiveLaw):
     Bistop wrapper applies the logic of the bistop to a generic underlying constitutive law.
     """
 
-    law_type: ConstitutiveLaw.LawType
     initial_status: Optional[Union[bool, str]]
     activating_condition: DriveCaller
     deactivating_condition: DriveCaller
     wrapped_const_law: ConstitutiveLaw
-
-    def name(self) -> ConstitutiveLaw.LawType:
-        return self.law_type
 
     def const_law_name(self) -> str:
         return 'bistop'
@@ -4707,12 +4595,8 @@ class InvariantAngularWrapper(ConstitutiveLaw):
     Invariant angular wrapper for 3D constitutive laws used within the “attached” variant of the deformable hinge joint.
     """
 
-    law_type: ConstitutiveLaw.LawType
     xi: Union[float, int, MBVar]
     wrapped_const_law: ConstitutiveLaw
-
-    def name(self) -> ConstitutiveLaw.LawType:
-        return self.law_type
 
     def const_law_name(self) -> str:
         return 'invariant angular'
@@ -4730,8 +4614,6 @@ class FileDriver(MBEntity):
     A comprehensive family of file drivers is available.
     """
     
-   
-
     idx: Union[MBVar, int]
     """Index of this file driver"""
 

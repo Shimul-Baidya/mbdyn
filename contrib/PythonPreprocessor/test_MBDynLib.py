@@ -92,9 +92,9 @@ class TestLinearElastic(unittest.TestCase):
         self.vector_6d_law = l.LinearElastic(law_type="6D isotropic law", stiffness=1e9)
 
     def test_name(self):
-        self.assertEqual(self.scalar_law.name(), l.ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW)
-        self.assertEqual(self.vector_3d_law.name(), l.ConstitutiveLaw.LawType.D3_ISOTROPIC_LAW)
-        self.assertEqual(self.vector_6d_law.name(), l.ConstitutiveLaw.LawType.D6_ISOTROPIC_LAW)
+        self.assertEqual(self.scalar_law.law_type, l.ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW)
+        self.assertEqual(self.vector_3d_law.law_type, l.ConstitutiveLaw.LawType.D3_ISOTROPIC_LAW)
+        self.assertEqual(self.vector_6d_law.law_type, l.ConstitutiveLaw.LawType.D6_ISOTROPIC_LAW)
         
     def test_const_law_name(self):
         self.assertEqual(self.scalar_law.const_law_header(), 'linear elastic')
@@ -153,9 +153,9 @@ class TestLinearViscousGeneric(unittest.TestCase):
         self.vector_6d_law = l.LinearViscousGeneric(law_type="6D isotropic law", viscosity=[[1e9, 0, 0, 0, 0, 0], [0, 1e9, 0, 0, 0, 0], [0, 0, 1e9, 0, 0, 0], [0, 0, 0, 1e9, 0, 0], [0, 0, 0, 0, 1e9, 0], [0, 0, 0, 0, 0, 1e9]])
 
     def test_name(self):
-        self.assertEqual(self.scalar_law.name(), l.ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW)
-        self.assertEqual(self.vector_3d_law.name(), l.ConstitutiveLaw.LawType.D3_ISOTROPIC_LAW)
-        self.assertEqual(self.vector_6d_law.name(), l.ConstitutiveLaw.LawType.D6_ISOTROPIC_LAW)
+        self.assertEqual(self.scalar_law.law_type, l.ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW)
+        self.assertEqual(self.vector_3d_law.law_type, l.ConstitutiveLaw.LawType.D3_ISOTROPIC_LAW)
+        self.assertEqual(self.vector_6d_law.law_type, l.ConstitutiveLaw.LawType.D6_ISOTROPIC_LAW)
         
     def test_const_law_name(self):
         self.assertEqual(self.scalar_law.const_law_name(), 'linear viscous generic')
