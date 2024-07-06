@@ -3792,8 +3792,8 @@ class ConstitutiveLaw(MBEntity):
     order to understand what the input and the output parameters are supposed to be.
     """
 
-    class Config:
-        arbitrary_types_allowed = True
+    # class Config:
+    #     arbitrary_types_allowed = True
 
     class LawType(str, Enum):
         SCALAR_ISOTROPIC_LAW = "scalar isotropic law"
@@ -3813,21 +3813,18 @@ class ConstitutiveLaw(MBEntity):
     @property
     def dim(self) -> int:
         """Determine the dimensionality based on the constitutive law name"""
-        name = self.law_type
-        if name == "scalar isotropic law":
+        if self.law_type == ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW:
             return 1
-        elif name == "3D isotropic law":
+        elif self.law_type == ConstitutiveLaw.LawType.D3_ISOTROPIC_LAW:
             return 3
-        elif name == "6D isotropic law":
+        elif self.law_type == ConstitutiveLaw.LawType.D6_ISOTROPIC_LAW:
             return 6
-        else:
-            raise ValueError(f"Unknown constitutive law name: {name}")
         
     def const_law_header(self) -> str:
-        """common syntax for start of any constitutive law"""
+        """Common syntax for start of any constitutive law"""
         if self.idx is not None:
-            return f'constitutive law: {self.idx}, name, "{self.law_type}",' \
-                   f'\n\t{self.dim()}, {self.const_law_name()}'
+            return f'constitutive law: {self.idx}, name, "{self.law_type.value}",' \
+                   f'\n\t{self.dim}, {self.const_law_name()}'
         else:
             return self.const_law_name()
     
@@ -3962,10 +3959,13 @@ class LinearElasticBistop(ConstitutiveLaw):
     Linear elastic bistop constitutive law
     """
 
+    class Config:
+        arbitrary_types_allowed = True
+
     stiffness: Union[float, MBVar]
     initial_status: Optional[Union[bool, str]]
-    activating_condition: DriveCaller 
-    deactivating_condition: DriveCaller
+    activating_condition: Union[DriveCaller, DriveCaller2] 
+    deactivating_condition: Union[DriveCaller, DriveCaller2]
 
     def const_law_name(self) -> str:
         return 'linear elastic bistop'
@@ -4153,11 +4153,14 @@ class LinearTimeVariantViscoelasticGeneric(ConstitutiveLaw):
     Linear time variant viscoelastic generic constitutive law
     """
 
+    class Config:
+        arbitrary_types_allowed = True
+
     stiffness: Union[float, MBVar, List[List[Union[float, MBVar]]]]
-    stiffness_scale: DriveCaller
+    stiffness_scale: Union[DriveCaller, DriveCaller2]
     viscosity: Optional[Union[float, MBVar, List[List[Union[float, MBVar]]]]] = None
     factor: Optional[Union[float, MBVar]] = None
-    viscosity_scale: DriveCaller
+    viscosity_scale: Union[DriveCaller, DriveCaller2]
 
     def const_law_name(self) -> str:
         return 'linear time variant viscoelastic generic'
@@ -4345,11 +4348,14 @@ class LinearViscoelasticBistop(ConstitutiveLaw):
     Linear viscoelastic bistop constitutive law
     """
 
+    class Config:
+        arbitrary_types_allowed = True
+
     stiffness: Union[float, MBVar]
     viscosity: Union[float, MBVar]
     initial_status: Optional[Union[bool, str]] = None
-    activating_condition: DriveCaller
-    deactivating_condition: DriveCaller
+    activating_condition: Union[DriveCaller, DriveCaller2]
+    deactivating_condition: Union[DriveCaller, DriveCaller2]
 
     def const_law_name(self) -> str:
         return 'linear viscoelastic bistop'
@@ -4563,9 +4569,12 @@ class BistopConstitutiveLaw(ConstitutiveLaw):
     Bistop wrapper applies the logic of the bistop to a generic underlying constitutive law.
     """
 
+    class Config:
+        arbitrary_types_allowed = True
+
     initial_status: Optional[Union[bool, str]]
-    activating_condition: DriveCaller
-    deactivating_condition: DriveCaller
+    activating_condition: Union[DriveCaller, DriveCaller2]
+    deactivating_condition: Union[DriveCaller, DriveCaller2]
     wrapped_const_law: ConstitutiveLaw
 
     def const_law_name(self) -> str:
@@ -4614,6 +4623,8 @@ class FileDriver(MBEntity):
     A comprehensive family of file drivers is available.
     """
     
+   
+
     idx: Union[MBVar, int]
     """Index of this file driver"""
 
