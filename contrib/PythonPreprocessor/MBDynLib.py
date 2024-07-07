@@ -4126,6 +4126,8 @@ class LinearViscoelasticGeneric(ConstitutiveLaw):
         else:
             raise TypeError("Invalid type for stiffness matrix")
         if self.viscosity is not None:
+            if self.factor is not None:
+                raise ValueError("Either viscosity or factor must be provided, not both.")
             if isinstance(self.viscosity, (float, MBVar)):
                 base_str += f', {self.viscosity}'
             elif isinstance(self.viscosity, list):
@@ -4137,7 +4139,7 @@ class LinearViscoelasticGeneric(ConstitutiveLaw):
                     for i in range(N):
                         row_str = ', '.join(str(self.viscosity[i][j]) for j in range(N))
                         matrix_str += f',\n\t{row_str}'
-                    base_str += f',\n{matrix_str}'
+                    base_str += f'{matrix_str}'
                 else:
                     raise ValueError("Unsupported size of viscosity matrix")
             else:
