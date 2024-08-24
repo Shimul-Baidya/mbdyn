@@ -4718,17 +4718,17 @@ class FixedStep(FileDriver):
     class Config:
         arbitrary_types_allowed = True
     
-    class InterpolationType(str, Enum):
+    class InterpolationType(Enum):
         LINEAR = "linear"
         CONST = "const"
 
-    class BailoutType(str, Enum):
+    class BailoutType(Enum):
         NONE = "none"
         UPPER = "upper"
         LOWER = "lower"
         ANY = "any"
 
-    class PadZeroesType(str, Enum):
+    class PadZeroesType(Enum):
         YES = 'yes'
         NO = 'no'
     
