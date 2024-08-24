@@ -3842,7 +3842,7 @@ class ConstitutiveLaw(MBEntity):
     # class Config:
     #     arbitrary_types_allowed = True
 
-    class LawType(str, Enum):
+    class LawType(Enum):
         SCALAR_ISOTROPIC_LAW = "scalar isotropic law"
         D3_ISOTROPIC_LAW = "3D isotropic law"
         D6_ISOTROPIC_LAW = "6D isotropic law"
@@ -3866,6 +3866,8 @@ class ConstitutiveLaw(MBEntity):
             return 3
         elif self.law_type == ConstitutiveLaw.LawType.D6_ISOTROPIC_LAW:
             return 6
+        else: 
+            raise ValueError(f"Unknown constitutive law name: {self.law_type}") 
         
     def const_law_header(self) -> str:
         """Common syntax for start of any constitutive law"""
