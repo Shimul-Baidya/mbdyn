@@ -208,17 +208,14 @@ class TestLinearViscousGeneric(unittest.TestCase):
         self.assertEqual(str(zero_viscosity), f'{zero_viscosity.const_law_header()}, 0.0')
 
 class TestLinearViscoelasticGeneric(unittest.TestCase):
-
     def test_valid_initialization_with_viscosity(self):
         stiffness = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
         viscosity = [[2.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 2.0]]
-
         law = l.LinearViscoelasticGeneric(
             law_type=l.ConstitutiveLaw.LawType.D3_ISOTROPIC_LAW,
             stiffness=stiffness,
             viscosity=viscosity
         )
-
         self.assertEqual(law.const_law_name(), 'linear viscoelastic generic')
         self.assertEqual(law.stiffness, stiffness)
         self.assertEqual(law.viscosity, viscosity)
@@ -227,13 +224,11 @@ class TestLinearViscoelasticGeneric(unittest.TestCase):
     def test_valid_initialization_with_factor(self):
         stiffness = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
         factor = 0.5
-
         law = l.LinearViscoelasticGeneric(
             law_type=l.ConstitutiveLaw.LawType.D3_ISOTROPIC_LAW,
             stiffness=stiffness,
             factor=factor
         )
-
         self.assertEqual(law.const_law_name(), 'linear viscoelastic generic')
         self.assertEqual(law.stiffness, stiffness)
         self.assertEqual(law.factor, factor)
@@ -242,26 +237,22 @@ class TestLinearViscoelasticGeneric(unittest.TestCase):
     def test_str_representation_with_viscosity(self):
         stiffness = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
         viscosity = [[2.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 2.0]]
-
         law = l.LinearViscoelasticGeneric(
             law_type=l.ConstitutiveLaw.LawType.D3_ISOTROPIC_LAW,
             stiffness=stiffness,
             viscosity=viscosity
         )
-
         expected_str = f'{law.const_law_header()},\n\t1.0, 0.0, 0.0,\n\t0.0, 1.0, 0.0,\n\t0.0, 0.0, 1.0,\n\t2.0, 0.0, 0.0,\n\t0.0, 2.0, 0.0,\n\t0.0, 0.0, 2.0'
         self.assertEqual(str(law), expected_str)
 
     def test_str_representation_with_factor(self):
         stiffness = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
         factor = 0.5
-
         law = l.LinearViscoelasticGeneric(
             law_type=l.ConstitutiveLaw.LawType.D3_ISOTROPIC_LAW,
             stiffness=stiffness,
             factor=factor
         )
-
         expected_str = f'{law.const_law_header()},\n\t1.0, 0.0, 0.0,\n\t0.0, 1.0, 0.0,\n\t0.0, 0.0, 1.0, proportional, 0.5'
         self.assertEqual(str(law), expected_str)
 

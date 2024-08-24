@@ -4715,8 +4715,8 @@ class FixedStep(FileDriver):
     Fixed Step file driver
     """
 
-    class Config:
-        arbitrary_types_allowed = True
+    # class Config:
+    #     arbitrary_types_allowed = True
     
     class InterpolationType(Enum):
         LINEAR = "linear"
@@ -4734,8 +4734,8 @@ class FixedStep(FileDriver):
     
     steps_number: Union[int, MBVar, str]  # 'count' or specific number of steps
     columns_number: Union[int, MBVar]
-    initial_time: Union[Number, MBVar, str]  # 'from file' or specific initial time
-    time_step: Union[Number, MBVar, str]  # 'from file' or specific time step
+    initial_time: Union[float, MBVar, str]  # 'from file' or specific initial time
+    time_step: Union[float, MBVar, str]  # 'from file' or specific time step
     interpolation: Optional[InterpolationType]
     pad_zeroes: Optional[PadZeroesType]
     bailout: Optional[BailoutType]
