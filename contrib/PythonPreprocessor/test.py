@@ -1,4 +1,4 @@
 import MBDynLib as l
 
-pos = l.Position('', [1.0, 2.0, 3.0])
-print(pos.relative_position)
+invalid_stiffness = [[1.0, 0.0], [0.0, 1.0], [0.0, 0.0]]
+print(len(invalid_stiffness))

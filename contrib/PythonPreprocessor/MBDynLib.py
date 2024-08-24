@@ -54,7 +54,7 @@ import builtins
 from enum import Enum
 from numbers import Number, Integral
 import sys
-from typing import Optional, Tuple, Union, List, Literal
+from typing import Optional, Tuple, Union, List, Literal, Any
 
 assert sys.version_info >= (3,6), 'Syntax for variable annotations (PEP 526) was introduced in Python 3.6'
 
@@ -65,7 +65,7 @@ declared_MBVars = {}
 MBDynLib_simplify = True
 
 try:
-    from pydantic import BaseModel, ConfigDict, field_validator
+    from pydantic import BaseModel, ConfigDict, field_validator, FieldValidationInfo, model_validator
     class _EntityBase(BaseModel):
         """Configuration for Entity with pydantic available"""
         model_config = ConfigDict(extra='forbid',
@@ -4147,9 +4147,37 @@ class LinearViscoelasticGeneric(ConstitutiveLaw):
     Linear viscoelastic generic constitutive law
     """
 
-    stiffness: Union[List[List[Union[float, MBVar]]]]
-    viscosity: Optional[Union[List[List[Union[float, MBVar]]]]] = None
+    stiffness: List[List[Union[float, MBVar]]]
+    viscosity: Optional[List[List[Union[float, MBVar]]]] = None
     factor: Optional[Union[float, MBVar]] = None
+
+    @model_validator(mode='before')
+    def check_viscosity_factor(cls, values: FieldValidationInfo) -> Any:
+        stiffness = values.get('stiffness')
+        viscosity = values.get('viscosity')
+        factor = values.get('factor')
+        # Ensure either viscosity or factor is provided, but not both
+        if viscosity is not None and factor is not None:
+            raise ValueError("Either viscosity or factor must be provided, not both.")
+        if viscosity is None and factor is None:
+            raise ValueError("One of viscosity or factor must be provided.")
+
+        def validate_matrix(matrix: List[List[Union[float, MBVar]]], name: str) -> None:
+            """Validate the matrix to ensure it's a square matrix of size 3x3 or 6x6."""
+            if matrix:
+                N = len(matrix)
+                if N not in {3, 6}:
+                    raise ValueError(f"Unsupported size of {name} matrix. Expected 3x3 or 6x6, got {N}x{N}.")
+                for row in matrix:
+                    if len(row) != N:
+                        raise ValueError(f"{name.capitalize()} matrix must be square. Expected {N}x{N}, but found a row with length {len(row)}.")
+        # Validate stiffness matrix
+        if stiffness:
+            validate_matrix(stiffness, 'stiffness')
+        # Validate viscosity matrix
+        if viscosity:
+            validate_matrix(viscosity, 'viscosity')
+        return values
     
     def const_law_name(self) -> str:
         return 'linear viscoelastic generic'
@@ -4173,8 +4201,6 @@ class LinearViscoelasticGeneric(ConstitutiveLaw):
         else:
             raise TypeError("Invalid type for stiffness matrix")
         if self.viscosity is not None:
-            if self.factor is not None:
-                raise ValueError("Either viscosity or factor must be provided, not both.")
             if isinstance(self.viscosity, (float, MBVar)):
                 base_str += f', {self.viscosity}'
             elif isinstance(self.viscosity, list):
@@ -4193,8 +4219,6 @@ class LinearViscoelasticGeneric(ConstitutiveLaw):
                 raise TypeError("Invalid type for viscosity matrix")
         elif self.factor is not None:
             base_str += f', proportional, {self.factor}'
-        else:
-            raise ValueError("Either viscosity or factor must be provided")
         return base_str
    
 class LinearTimeVariantViscoelasticGeneric(ConstitutiveLaw):
