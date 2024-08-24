@@ -299,5 +299,70 @@ class TestLinearViscoelasticGeneric(unittest.TestCase):
                 factor=0.5
             )
 
+class TestPosition2(unittest.TestCase):
+    def test_initialization_with_list(self):
+        pos = l.Position('', [1.0, 2.0, 3.0])
+        self.assertEqual(pos.relative_position, [1.0, 2.0, 3.0])
+        pos2 = l.Position2(reference='', relative_position=[1.0, 2.0, 3.0])
+        self.assertEqual(pos2.relative_position, [1.0, 2.0, 3.0])
+        self.assertEqual(pos.relative_position, pos2.relative_position)
+
+    def test_initialization_with_non_list(self):
+        pos = l.Position('', 1.0)
+        self.assertEqual(pos.relative_position, [1.0])
+        pos2 = l.Position2(reference='', relative_position=1.0)
+        self.assertEqual(pos2.relative_position, [1.0])
+        self.assertEqual(pos.relative_position, pos2.relative_position)
+
+    def test_string_representation_with_empty_reference(self):
+        pos = l.Position('', [1.0, 2.0, 3.0])
+        self.assertEqual(str(pos), '1.0, 2.0, 3.0')
+        pos2 = l.Position2(reference='', relative_position=[1.0, 2.0, 3.0])
+        self.assertEqual(str(pos2), '1.0, 2.0, 3.0')
+        self.assertEqual(str(pos), str(pos2))
+
+    def test_string_representation_with_non_empty_reference(self):
+        pos = l.Position('global', [1.0, 2.0, 3.0])
+        self.assertEqual(str(pos), 'reference, global, 1.0, 2.0, 3.0')
+        pos2 = l.Position2(reference='global', relative_position=[1.0, 2.0, 3.0])
+        self.assertEqual(str(pos2), 'reference, global, 1.0, 2.0, 3.0')
+        self.assertEqual(str(pos), str(pos2))
+
+    def test_isnull(self):
+        pos = l.Position('', [ l.null()])
+        self.assertTrue(pos.isnull())
+        pos2 = l.Position2(reference='', relative_position=[l.null()])
+        self.assertTrue(pos2.isnull())
+        self.assertEqual(str(pos), str(pos2))
+
+    def test_iseye(self):
+        pos = l.Position('', [l.eye()])
+        self.assertTrue(pos.iseye())
+        pos2 = l.Position2(reference='', relative_position=[l.eye()])
+        self.assertTrue(pos2.iseye())
+        self.assertEqual(str(pos), str(pos2))
+
+class TestReference2(unittest.TestCase):
+    def test_initialization(self):
+        pos2 = l.Position2(reference='', relative_position=[1.0, 2.0, 3.0])
+        orient2 = l.Position2(reference='', relative_position=[0.0, 0.0, 1.0])
+        vel2 = l.Position2(reference='', relative_position=[0.0, 0.0, 0.0])
+        angvel2 = l.Position2(reference='', relative_position=[0.1, 0.1, 0.1])
+        ref2 = l.Reference2(idx=1, position=pos2, orientation=orient2, velocity=vel2, angular_velocity=angvel2)
+        self.assertEqual(str(ref2), 'reference: 1, \n\t1.0, 2.0, 3.0,\n\t0.0, 0.0, 1.0,\n\t0.0, 0.0, 0.0,\n\t0.1, 0.1, 0.1;\n')
+
+    def test_against_Reference(self):
+        pos = l.Position('', [1.0, 2.0, 3.0])
+        orient = l.Position('', [0.0, 0.0, 1.0])
+        vel = l.Position('', [0.0, 0.0, 0.0])
+        angvel = l.Position('', [0.1, 0.1, 0.1])
+        ref = l.Reference(1, pos, orient, vel, angvel)
+        pos2 = l.Position2(reference='', relative_position=[1.0, 2.0, 3.0])
+        orient2 = l.Position2(reference='', relative_position=[0.0, 0.0, 1.0])
+        vel2 = l.Position2(reference='', relative_position=[0.0, 0.0, 0.0])
+        angvel2 = l.Position2(reference='', relative_position=[0.1, 0.1, 0.1])
+        ref2 = l.Reference2(idx=1, position=pos2, orientation=orient2, velocity=vel2, angular_velocity=angvel2)
+        self.assertEqual(str(ref), str(ref2))
+
 if __name__ == '__main__':
     unittest.main()

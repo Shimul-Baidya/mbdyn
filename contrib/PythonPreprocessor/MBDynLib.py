@@ -54,7 +54,7 @@ import builtins
 from enum import Enum
 from numbers import Number, Integral
 import sys
-from typing import Optional, Tuple, Union, List
+from typing import Optional, Tuple, Union, List, Literal
 
 assert sys.version_info >= (3,6), 'Syntax for variable annotations (PEP 526) was introduced in Python 3.6'
 
@@ -65,7 +65,7 @@ declared_MBVars = {}
 MBDynLib_simplify = True
 
 try:
-    from pydantic import BaseModel, ConfigDict
+    from pydantic import BaseModel, ConfigDict, field_validator
     class _EntityBase(BaseModel):
         """Configuration for Entity with pydantic available"""
         model_config = ConfigDict(extra='forbid',
@@ -529,6 +529,53 @@ class Position:
         return (self.reference == '') and isinstance(self.relative_position[0], null)
     def iseye(self):
         return (self.reference == '') and isinstance(self.relative_position[0], eye)
+
+# TODO: Rename to Position when all are moved
+class Position2(MBEntity):
+    relative_position: List[Union[float, MBVar, null, eye]]
+    reference: Union['Reference2', Literal['global', 'node', 'other node', '']]
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    @field_validator('relative_position', mode='before')
+    def ensure_list(cls, v):
+        if not isinstance(v, list):
+            return [v]
+        return v
+    @field_validator('reference', mode='before')
+    def validate_reference(cls, v):
+        if isinstance(v, str):
+            if v not in {'global', 'node', 'other node', ''}:
+                raise ValueError("Invalid literal for reference")
+        elif not isinstance(v, Reference2):
+            raise ValueError("reference must be either a Reference2 instance or one of the specified strings")
+        return v
+    def __str__(self):
+        s = ''
+        if self.reference != '':
+            s = 'reference, ' + str(self.reference) + ', '
+        s = s + ', '.join(str(i) for i in self.relative_position)
+        return s
+    def isnull(self):
+        return (self.reference == '') and isinstance(self.relative_position[0], null)
+    def iseye(self):
+        return (self.reference == '') and isinstance(self.relative_position[0], eye)
+
+# TODO: Rename to Reference when all are moved
+class Reference2(MBEntity):
+    idx: Union[int, MBVar]
+    position: Position2
+    orientation: Position2
+    velocity: Position2
+    angular_velocity: Position2
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    def __str__(self):
+        s = 'reference: '
+        s = s + str(self.idx) + ', \n'
+        s = s + '\t' + str(self.position) + ',\n'
+        s = s + '\t' + str(self.orientation) + ',\n'
+        s = s + '\t' + str(self.velocity) + ',\n'
+        s = s + '\t' + str(self.angular_velocity) + ';\n'
+        return s
+Position2.model_rebuild()
 
 class Node:
     def __init__(self, idx, pos, orient, vel, angular_vel, node_type = 'dynamic',
@@ -4637,7 +4684,7 @@ class FileDriver(MBEntity):
 
     def file_header(self) -> str:
         """Common syntax for start of any file driver"""
-        return f'file: {self.label()}, {self.driver_type()}'
+        return f'file: {self.idx}, {self.driver_type()}'
     
 class FixedStep(FileDriver):
     """
