@@ -2,6 +2,8 @@
 __pycache__/
 *.py[cod]
 *$py.class
+## Python virtual environment
+venv/
 
 ## ebrowse - class hierarchy database
 BROWSE
