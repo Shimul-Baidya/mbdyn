@@ -466,15 +466,13 @@ class IfndefMBVar(MBVar):
         else:
             MBVar.__init__(self, name, 'ifndef ' + var_type, value)
 
-class null:
+class null(MBEntity):
     def __str__(self):
-        s = 'null'
-        return s
+        return 'null'
 
-class eye:
+class eye(MBEntity):
     def __str__(self):
-        s = 'eye'
-        return s
+        return 'eye'
 
 class Reference:
     def __init__(self, idx, pos, orient, vel, angvel):
@@ -534,7 +532,6 @@ class Position:
 class Position2(MBEntity):
     relative_position: List[Union[float, MBVar, null, eye]]
     reference: Union['Reference2', Literal['global', 'node', 'other node', '']]
-    model_config = ConfigDict(arbitrary_types_allowed=True)
     @field_validator('relative_position', mode='before')
     def ensure_list(cls, v):
         if not isinstance(v, list):
@@ -565,8 +562,7 @@ class Reference2(MBEntity):
     position: Position2
     orientation: Position2
     velocity: Position2
-    angular_velocity: Position2
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    angular_velocity: Position2    
     def __str__(self):
         s = 'reference: '
         s = s + str(self.idx) + ', \n'
