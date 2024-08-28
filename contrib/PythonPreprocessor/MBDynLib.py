@@ -657,6 +657,103 @@ class StaticDisplacementNode(DisplacementNode):
     def __init__(self, idx, pos, vel):
         DisplacementNode.__init__(self, idx, pos, vel, 'static')
 
+# Change name to Node when all are moved
+class Node2(MBEntity):
+    idx: Union[int, MBVar]
+    position: Position2
+    orientation: Position2
+    velocity: Position2
+    angular_velocity: Position2
+    node_type: str = 'dynamic'
+    scale: Optional[Union[str, float, MBVar]] = 'default'
+    output: Optional[Union[Literal['yes', 'no'], bool]] = 'yes'
+    def __str__(self):
+        s = f"structural: {self.idx}, {self.node_type},\n"
+        s += f"\t{self.position},\n"
+        s += f"\t{self.orientation},\n"
+        s += f"\t{self.velocity},\n"
+        s += f"\t{self.angular_velocity}"
+        if self.scale != 'default':
+            s += f",\n\tscale, {self.scale}"
+        if self.output != 'yes':
+            s += f",\n\toutput, {self.output}"
+        return s
+    
+class DynamicNode2(Node2):
+    accelerations: Optional[Union[Literal['yes', 'no'], bool]] = None
+    def __init__(self, idx, pos, orient, vel, angular_vel, accelerations=None):
+        super().__init__(idx=idx, position=pos, orientation=orient, velocity=vel, angular_velocity=angular_vel, node_type='dynamic')
+        self.accelerations = accelerations
+    def __str__(self):
+        s = super().__str__()
+        if self.accelerations is not None:
+            s += f",\n\taccelerations, {self.accelerations}"
+        s += ';\n'
+        return s
+
+class StaticNode2(Node2):
+    def __init__(self, idx, pos, orient, vel, angular_vel):
+        super().__init__(idx=idx, position=pos, orientation=orient, velocity=vel, angular_velocity=angular_vel, node_type='static')
+    def __str__(self):
+        return super().__str__() + ';\n'
+
+class ModalNode(Node2):
+    accelerations: Optional[Union[Literal['yes', 'no'], bool]] = None
+    def __init__(self, idx, pos, orient, vel, angular_vel, accelerations=None):
+        super().__init__(idx=idx, position=pos, orientation=orient, velocity=vel, angular_velocity=angular_vel, node_type='modal')
+        self.accelerations = accelerations
+    def __str__(self):
+        s = super().__str__()
+        if self.accelerations is not None:
+            s += f",\n\taccelerations, {self.accelerations}"
+        s += ';\n'
+        return s
+
+class DisplacementNode2(MBEntity):
+    idx: Union[int, MBVar]
+    position: Position2
+    velocity: Position2
+    node_type: str = 'dynamic'
+    scale: Optional[Union[str, float, MBVar]] = 'default'
+    output: Optional[Union[Literal['yes', 'no'], bool]] = 'yes'
+    def __str__(self):
+        s = f"structural: {self.idx}, {self.node_type} displacement,\n"
+        s += f"\t{self.position},\n"
+        s += f"\t{self.velocity}"
+        if self.scale != 'default':
+            s += f",\n\tscale, {self.scale}"
+        if self.output != 'yes':
+            s += f",\n\toutput, {self.output}"
+        return s
+
+class DynamicDisplacementNode2(DisplacementNode2):
+    accelerations: Optional[Union[Literal['yes', 'no'], bool]] = None
+    def __init__(self, idx, pos, vel, accelerations=None):
+        super().__init__(idx=idx, position=pos, velocity=vel, node_type='dynamic')
+        self.accelerations = accelerations
+    def __str__(self):
+        s = super().__str__()
+        if self.accelerations is not None:
+            s += f",\n\taccelerations, {self.accelerations}"
+        return s + ';\n'
+
+class StaticDisplacementNode2(DisplacementNode2):
+    def __init__(self, idx, pos, vel):
+        super().__init__(idx=idx, position=pos, velocity=vel, node_type='static')
+    def __str__(self):
+        return super().__str__() + ';\n'
+
+class ModalDisplacementNode(DisplacementNode2):
+    accelerations: Optional[Union[Literal['yes', 'no'], bool]] = None
+    def __init__(self, idx, pos, vel, accelerations=None):
+        super().__init__(idx=idx, position=pos, velocity=vel, node_type='modal')
+        self.accelerations = accelerations
+    def __str__(self):
+        s = super().__str__()
+        if self.accelerations is not None:
+            s += f",\n\taccelerations, {self.accelerations}"
+        return s + ';\n'
+    
 class PointMass:
     def __init__(self, idx, node, mass, output = 'yes'):
         self.idx = idx
