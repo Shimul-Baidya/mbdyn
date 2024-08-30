@@ -799,9 +799,9 @@ class Body(Element):
         if self.inertial != null:
             s = s + ',\n'
             if isinstance(self.inertial, list):
-                s = s + ', '.join(str(i) for i in self.inertial_matrix)
+                s = s + ', '.join(str(i) for i in self.inertial)
             else:
-                s = s + ', ' + self.inertial_matrix
+                s = s + ', ' + self.inertial
         if self.output != 'yes':
             s = s + ',\n\toutput, ' + str(self.output)
         s = s + ';\n'
