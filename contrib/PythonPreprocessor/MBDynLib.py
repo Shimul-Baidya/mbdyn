@@ -770,6 +770,181 @@ class PointMass:
 class Element:
     idx = -1
 
+# TODO: Rename to Element when all are moved
+class Element2(MBEntity):
+    """
+    Abstract base class for all elements
+    """
+
+    idx: Union[MBVar, int]
+    output: Union[bool, str, int]
+    @field_validator('output', mode='before')
+    def validate_output(cls, v):
+        if isinstance(v, str):
+            if v not in {'yes', 'no'}:
+                raise ValueError("output must be 'yes', 'no', or a boolean value")
+        elif not isinstance(v, (bool, int)):
+            raise ValueError("output must be a boolean, integer, or one of 'yes'/'no'")
+        return v
+
+    @abstractmethod
+    def element_type(self) -> str:
+        """Every element class must define this to return its MBDyn syntax name"""
+        raise NotImplementedError("called elelemt_type of abstract Element")
+
+    def element_header(self) -> str:
+        """common syntax for start of any element"""
+        return f'{self.element_type()}: {self.idx}'
+    
+    def element_footer(self) -> str:
+        s = ''
+        if self.output != 'yes':
+            s = s + f''',\n\toutput, {self.output}'''
+        s = s + ';\n'
+        return s
+    
+class AngularAccelerationJoint(Element2):
+    """
+    This joint imposes the absolute angular acceleration of a node about a given axis.
+    """  
+    node_label: Union[Integral, MBVar]
+    relative_direction: List[Union[int, float, MBVar]]
+    acceleration: Union['DriveCaller', 'DriveCaller2']
+
+    def element_type(self):
+        return 'joint'
+    
+    @field_validator('relative_direction', mode='before')
+    def validate_relative_direction(cls, v):
+        if not isinstance(v, list) or len(v) != 3:
+            raise ValueError("relative_direction must be a list of three numbers")
+        magnitude = sum(i**2 for i in v) ** 0.5
+        if not (0.999 <= magnitude <= 1.001):  # Allowing some tolerance for floating-point precision
+            raise ValueError("relative_direction must be a unit vector (magnitude = 1)")
+        return v
+    
+    def __str__(self):
+        s = f'''{self.element_header()}, angular acceleration joint'''
+        s += f''',\n\t{self.node_label}, {self.relative_direction}'''
+        s += f''',\n\t{self.acceleration}'''
+        s += self.element_footer()
+        return s
+
+class AngularVelocity(Element2):
+    """
+    Represents a joint imposing the absolute angular velocity of a node about a given axis.
+    """
+    node_label: Union[Integral, MBVar]
+    relative_direction: List[Union[int, float, MBVar]]
+    velocity: Union['DriveCaller', 'DriveCaller2']
+
+    def element_type(self):
+        return 'joint'
+
+    @field_validator('relative_direction', mode='before')
+    def validate_relative_direction(cls, v):
+        if not isinstance(v, list) or len(v) != 3:
+            raise ValueError("relative_direction must be a list of three numbers")
+        magnitude = sum(i**2 for i in v) ** 0.5
+        if not (0.999 <= magnitude <= 1.001):  # Allowing some tolerance for floating-point precision
+            raise ValueError("relative_direction must be a unit vector (magnitude = 1)")
+        return v
+    
+    def __str__(self):
+        s = f'''{self.element_header()}, angular velocity'''
+        s += f''',\n\t{self.node_label}, {self.relative_direction}'''
+        s += f''',\n\t{self.velocity}'''
+        s += self.element_footer()
+        return s
+    
+class AxialRotation(Element2):
+    """
+    This joint is equivalent to a revolute hinge, but the angular velocity about axis 3 is imposed by means of the driver.
+    """
+    node_1_label: Union[Integral, MBVar]
+    position_1: Position2
+    orientation_mat_1: Position2
+    node_2_label: Union[Integral, MBVar]
+    position_2: Position2
+    orientation_mat_2: Position2
+    angular_velocity: Union['DriveCaller', 'DriveCaller2']
+
+    def element_type(self):
+        return 'joint'
+    
+    def __str__(self):
+        s = f'{self.element_header()}, axial rotation'
+        s += f''',\n\t{self.node_1_label}'''
+        s += f''',\n\t\tposition, {self.position_1}'''
+        s += f''',\n\t\torientation, {self.orientation_mat_1}'''
+        s += f''',\n\t{self.node_2_label}'''
+        s += f''',\n\t\tposition, {self.position_2}'''
+        s += f''',\n\t\torientation, {self.orientation_mat_2}'''
+        s += f''',\n\t{self.angular_velocity}'''
+        s += self.element_footer()
+        return s
+
+class BeamSlider(Element2):
+    """
+    This joint implements a slider, e.g. it constrains a structural node on a string of three-node beams.
+    """
+    slider_node_label: Union[Integral, MBVar]
+    position: Position2
+    orientation: Optional[Position2]
+    slider_type: Optional[str] = None  # should be one of 'spherical', 'classic', or 'spline'
+    beam_number: Union[Integral, MBVar]
+    three_node_beam: 'Beam'
+    first_node_offset: Union[str, Position2]
+    first_node_orientation: Optional[Union[str, Position2]]
+    mid_node_offset: Position2
+    mid_node_orientation: Optional[Union[str, Position2]]
+    end_node_offset: Position2
+    end_node_orientation: Optional[Union[str, Position2]]
+    inital_beam: Optional['Beam']
+    initial_node: Optional[Union[Node2, Node]]
+    smearing_factor: Optional[Union[float, MBVar, Integral]]
+
+    def element_type(self):
+        return 'joint'
+
+    @field_validator('slider_type', mode='before')
+    def validate_slider_type(cls, v):
+        allowed_types = {'spherical', 'classic', 'spline'}
+        if v is not None and v not in allowed_types:
+            raise ValueError(f"slider_type must be one of {allowed_types}")
+        return v
+    
+    def __str__(self):
+        s = f'{self.element_header()}, kinematic'
+        s += f''',\n\t{self.slider_node_label}'''
+        s += f''',\n\t\t{self.position}'''
+        if self.orientation is not None:
+            s += f''',\n\t\hinge, {self.orientation}'''
+        if self.slider_type is not None:
+            s += f''',\n\ttype, {self.slider_type}'''
+        s += f''',\n\t{self.beam_number},'''
+        s += f''',\n\t\t{self.three_node_beam}'''
+        if isinstance(self.first_node_offset, str) and self.first_node_offset == 'same':
+            s += f''',\n\t\t\tsame'''
+        else:
+            s += f''',\n\t\t\t{self.first_node_offset}'''
+        if self.first_node_orientation is not None:
+            s += f''',\n\t\t\hinge, {self.first_node_orientation}'''
+        s += f''',\n\t\t\t{self.mid_node_offset}'''
+        if self.mid_node_orientation is not None:
+            s += f''',\n\t\t\thinge, {self.mid_node_orientation}'''
+        s += f''',\n\t\t\t{self.end_node_offset}'''
+        if self.end_node_orientation is not None:
+            s += f''',\n\t\t\thinge, {self.end_node_orientation}'''
+        if self.initial_beam is not None:
+            s += f''',\n\tinitial beam, {self.initial_beam}'''
+        if self.initial_node is not None:
+            s += f''',\n\tinitial node, {self.initial_node}'''
+        if self.smearing_factor is not None:
+            s += f''',\n\tsmearing, {self.smearing_factor}'''
+        s += self.element_footer()
+        return s
+
 class Body(Element):
     def __init__(self, idx, node, mass, position, inertial_matrix, inertial = null,
             output = 'yes'):
@@ -1293,7 +1468,7 @@ class CardanoHinge(Element):
             ' relative position orientations must be given in a list' +
             '\n-------------------\n')
         self.idx = idx
-        self.type = 'cardano hinge'
+        self.type = 'joint'
         self.nodes = nodes
         self.positions = positions
         self.orientations = orientations
@@ -1489,7 +1664,7 @@ class SphericalHinge(Element):
             ' relative position orientations must be given in a list' +
             '\n-------------------\n')
         self.idx = idx
-        self.type = 'spherical hinge'
+        self.type = 'joint'
         self.nodes = nodes
         self.positions = positions
         self.orientations = orientations
@@ -1856,6 +2031,10 @@ class DriveCaller2(MBEntity):
             return f'drive caller: {self.idx}, {self.drive_type()}'
         else:
             return self.drive_type()
+
+AngularAccelerationJoint.model_rebuild()
+AngularVelocity.model_rebuild()
+AxialRotation.model_rebuild()
 
 class ArrayDriveCaller(DriveCaller):
     type = 'array'
