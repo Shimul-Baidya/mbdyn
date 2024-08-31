@@ -945,6 +945,45 @@ class BeamSlider(Element2):
         s += self.element_footer()
         return s
 
+class Brake(Element2):
+    """
+    This element models a wheel brake, i.e., a constraint that applies a frictional internal torque between two
+    nodes about an axis. The frictional torque depends on the normal force that is applied as an external
+    input by means of the same friction models implemented for regular joints.
+    """
+
+    node_1_label: Union[Integral, MBVar]
+    position_1: Position2
+    orientation_mat_1: Optional[Position2] = None
+    node_2_label: Union[Integral, MBVar]
+    position_2: Position2
+    orientation_mat_2: Optional[Position2] = None
+    average_radius: Union[float, MBVar]
+    preload: Optional[Union[float, MBVar, Integral]] = None
+    friction_model: str  # TODO: Check if the check is correct
+    shape_function: str  # TODO: Check if the check is correct
+    normal_force: Union['DriveCaller', 'DriveCaller2']
+
+    def element_type(self):
+        return 'joint'
+
+    def __str__(self):
+        s = f'{self.element_header()}, brake'
+        s += f''',\n\t{self.node_1_label}, {self.position_1}'''
+        if self.orientation_mat_1 is not None:
+            s += f''',\n\thinge, {self.orientation_mat_1}'''
+        s += f''',\n\t{self.node_2_label}, {self.position_2}'''
+        if self.orientation_mat_2 is not None:
+            s += f''',\n\thinge, {self.orientation_mat_2}'''
+        s += f''',\n\tfriction, {self.average_radius}'''
+        if self.preload is not None:
+            s += f''',\n\t\tpreload, {self.preload}'''
+        s += f''',\n\t\t{self.friction_model}'''
+        s += f''',\n\t\t{self.shape_function}'''
+        s += f''',\n\t{self.normal_force}'''
+        s += self.element_footer()
+        return s
+
 class Body(Element):
     def __init__(self, idx, node, mass, position, inertial_matrix, inertial = null,
             output = 'yes'):
@@ -1748,6 +1787,8 @@ class Beam(Element):
             s = s + ',\n\toutput, ' + str(self.output)
         s = s + ';\n'
         return s
+    
+    BeamSlider.model_rebuild()
 
 class AerodynamicBody(Element):
     def __init__(self, idx, node, 
@@ -2035,6 +2076,7 @@ class DriveCaller2(MBEntity):
 AngularAccelerationJoint.model_rebuild()
 AngularVelocity.model_rebuild()
 AxialRotation.model_rebuild()
+Brake.model_rebuild()
 
 class ArrayDriveCaller(DriveCaller):
     type = 'array'
