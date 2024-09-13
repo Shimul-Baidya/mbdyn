@@ -350,5 +350,214 @@ class TestReference2(unittest.TestCase):
         ref2 = l.Reference2(idx=1, position=pos2, orientation=orient2, velocity=vel2, angular_velocity=angvel2)
         self.assertEqual(str(ref), str(ref2))
 
+class TestCardanoPin(unittest.TestCase):
+
+    def test_abstract_class(self):
+        """Check that user can't create abstract classes, which are used only to share functionality (can't be part of MBDyn output)"""
+        with self.assertRaises(TypeError):
+            e = l.Element2()
+
+    def setUp(self):
+        self.node_label = 5
+        self.relative_position = [0.0, 1.0, 2.0]
+        self.absolute_pin_position = l.Position2(reference='global', relative_position=[3.0, 4.0, 5.0])
+
+        # Optional values for testing with orientations
+        self.relative_orientation_matrix = l.Position2(
+            relative_position=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+            reference=''
+        )
+        self.absolute_orientation_matrix = l.Position2(
+            relative_position=[[0.0, 1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]],
+            reference='node'
+        )
+
+        # Initialize CardanoPin with required fields
+        self.cardano_pin = l.CardanoPin(
+            idx=1,
+            output='yes',
+            node_label=self.node_label,
+            position=l.Position2(relative_position=self.relative_position, reference='global'),
+            absolute_pin_position=self.absolute_pin_position
+        )
+
+    def test_initialization(self):
+        # Test that the CardanoPin initializes correctly with provided values
+        self.assertEqual(self.cardano_pin.node_label, self.node_label)
+        self.assertIsInstance(self.cardano_pin.position, l.Position2)
+        self.assertEqual(self.cardano_pin.position.relative_position, self.relative_position)
+        self.assertEqual(self.cardano_pin.position.reference, 'global')
+        self.assertEqual(self.cardano_pin.absolute_pin_position, self.absolute_pin_position)
+        self.assertIsNone(self.cardano_pin.orientation_mat)
+        self.assertIsNone(self.cardano_pin.absolute_pin_orientation_mat)
+        self.assertEqual(self.cardano_pin.idx, 1)
+        self.assertEqual(self.cardano_pin.output, 'yes')
+
+    def test_str_representation_without_optional(self):
+        # Test the string output when optional orientation matrices are not provided
+        expected_str = (
+            f'{self.cardano_pin.element_header()}, cardano pin,\n\t{self.node_label},'
+            f'\n\t\tposition, {self.cardano_pin.position},'
+            f'\n\tposition, {self.cardano_pin.absolute_pin_position}'
+            f'{self.cardano_pin.element_footer()}'
+        )
+        self.assertEqual(str(self.cardano_pin), expected_str)
+
+    def test_str_representation_with_optional(self):
+        # Initialize with optional orientation matrices
+        cardano_pin_with_orientation = l.CardanoPin(
+            idx=2,
+            output='no',
+            node_label=self.node_label,
+            position=l.Position2(relative_position=self.relative_position, reference='global'),
+            orientation_mat=self.relative_orientation_matrix,
+            absolute_pin_position=self.absolute_pin_position,
+            absolute_pin_orientation_mat=self.absolute_orientation_matrix
+        )
+
+        expected_str = (
+            f'{cardano_pin_with_orientation.element_header()}, cardano pin,\n\t{self.node_label},'
+            f'\n\t\tposition, {cardano_pin_with_orientation.position},'
+            f'\n\t\torientation, {self.relative_orientation_matrix},'
+            f'\n\tposition, {cardano_pin_with_orientation.absolute_pin_position},'
+            f'\n\torientation, {self.absolute_orientation_matrix}'
+            f'{cardano_pin_with_orientation.element_footer()}'
+        )
+        self.assertEqual(str(cardano_pin_with_orientation), expected_str)
+
+    def test_optional_none_handling(self):
+        # Test to check that None is handled correctly for optional orientation matrices
+        cardano_pin_without_orientation = l.CardanoPin(
+            idx=3,
+            node_label=self.node_label,
+            position=l.Position2(relative_position=self.relative_position, reference=''),
+            absolute_pin_position=self.absolute_pin_position
+        )
+
+        # Assert that orientation matrices remain None
+        self.assertIsNone(cardano_pin_without_orientation.orientation_mat)
+        self.assertIsNone(cardano_pin_without_orientation.absolute_pin_orientation_mat)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_invalid_node_label(self):
+        # Test that passing invalid node_label raises the appropriate error
+        with self.assertRaises(Exception):
+            l.CardanoPin(
+                idx=4,
+                node_label="invalid_label",  # Invalid type for node_label
+                position=l.Position2(relative_position=self.relative_position, reference='global'),
+                absolute_pin_position=self.absolute_pin_position
+            )
+
+    def test_invalid_position(self):
+        # Test invalid Position2 for position and absolute_pin_position
+        with self.assertRaises(ValueError):
+            l.CardanoPin(
+                idx=5,
+                node_label=self.node_label,
+                position=l.Position2(relative_position='invalid_value', reference='global'),
+                absolute_pin_position=self.absolute_pin_position
+            )
+
+    def test_isnull_function(self):
+        # Test if the `isnull()` function works correctly in Position2
+        null_position = l.Position2(relative_position=[l.null()], reference='')
+        self.assertTrue(null_position.isnull())
+
+    def test_iseye_function(self):
+        # Test if the `iseye()` function works correctly in Position2
+        eye_position = l.Position2(relative_position=[l.eye()], reference='')
+        self.assertTrue(eye_position.iseye())
+
+class TestCardanoRotation(unittest.TestCase):
+
+    def setUp(self):
+        self.node_1_label = 1
+        self.node_2_label = 2
+
+        # Optional values for testing with orientations
+        self.orientation_matrix_1 = l.Position2(
+            relative_position=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+            reference=''
+        )
+        self.orientation_matrix_2 = l.Position2(
+            relative_position=[[0.0, 1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]],
+            reference='node'
+        )
+
+        # Initialize CardanoRotation with required fields
+        self.cardano_rotation = l.CardanoRotation(
+            idx=1,
+            node_1_label=self.node_1_label,
+            node_2_label=self.node_2_label
+        )
+
+    def test_initialization(self):
+        # Test that the CardanoRotation initializes correctly with provided values
+        self.assertEqual(self.cardano_rotation.node_1_label, self.node_1_label)
+        self.assertEqual(self.cardano_rotation.node_2_label, self.node_2_label)
+        self.assertIsNone(self.cardano_rotation.orientation_mat_1)
+        self.assertIsNone(self.cardano_rotation.orientation_mat_2)
+        self.assertEqual(self.cardano_rotation.idx, 1)
+        self.assertEqual(self.cardano_rotation.output, 'yes')
+
+    def test_str_representation_without_optional(self):
+        # Test the string output when optional orientation matrices are not provided
+        expected_str = (
+            f'{self.cardano_rotation.element_header()}, cardano rotation,\n\t{self.node_1_label},'
+            f'\n\t{self.node_2_label}'
+            f'{self.cardano_rotation.element_footer()}'
+        )
+        self.assertEqual(str(self.cardano_rotation), expected_str)
+
+    def test_str_representation_with_optional(self):
+        # Initialize with optional orientation matrices
+        cardano_rotation_with_orientation = l.CardanoRotation(
+            idx=2,
+            output='no',
+            node_1_label=self.node_1_label,
+            orientation_mat_1=self.orientation_matrix_1,
+            node_2_label=self.node_2_label,
+            orientation_mat_2=self.orientation_matrix_2
+        )
+
+        expected_str = (
+            f'{cardano_rotation_with_orientation.element_header()}, cardano rotation,\n\t{self.node_1_label},'
+            f'\n\t\torientation, {self.orientation_matrix_1},'
+            f'\n\t{self.node_2_label},'
+            f'\n\t\torientation, {self.orientation_matrix_2}'
+            f'{cardano_rotation_with_orientation.element_footer()}'
+        )
+        self.assertEqual(str(cardano_rotation_with_orientation), expected_str)
+
+    def test_optional_none_handling(self):
+        # Test to check that None is handled correctly for optional orientation matrices
+        cardano_rotation_without_orientation = l.CardanoRotation(
+            idx=3,
+            node_1_label=self.node_1_label,
+            node_2_label=self.node_2_label
+        )
+
+        # Assert that orientation matrices remain None
+        self.assertIsNone(cardano_rotation_without_orientation.orientation_mat_1)
+        self.assertIsNone(cardano_rotation_without_orientation.orientation_mat_2)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_invalid_node_labels(self):
+        # Test that passing invalid node labels raises the appropriate error
+        with self.assertRaises(Exception):
+            l.CardanoRotation(
+                idx=4,
+                node_1_label="invalid_label",  # Invalid type for node_1_label
+                node_2_label=self.node_2_label
+            )
+
+        with self.assertRaises(Exception):
+            l.CardanoRotation(
+                idx=5,
+                node_1_label=self.node_1_label,
+                node_2_label="invalid_label"  # Invalid type for node_2_label
+            )
+        
 if __name__ == '__main__':
     unittest.main()

@@ -55,6 +55,8 @@ from enum import Enum
 from numbers import Number, Integral
 import sys
 from typing import Optional, Tuple, Union, List, Literal, Any
+import warnings
+
 
 assert sys.version_info >= (3,6), 'Syntax for variable annotations (PEP 526) was introduced in Python 3.6'
 
@@ -530,7 +532,7 @@ class Position:
 
 # TODO: Rename to Position when all are moved
 class Position2(MBEntity):
-    relative_position: List[Union[float, MBVar, null, eye]]
+    relative_position: Union[List[Union[float, MBVar, null, eye]], List[List[Union[float, MBVar, null, eye]]]]
     reference: Union['Reference2', Literal['global', 'node', 'other node', '']]
     @field_validator('relative_position', mode='before')
     def ensure_list(cls, v):
@@ -777,7 +779,7 @@ class Element2(MBEntity):
     """
 
     idx: Union[MBVar, int]
-    output: Union[bool, str, int]
+    output: Union[bool, str, int] = 'yes'
     @field_validator('output', mode='before')
     def validate_output(cls, v):
         if isinstance(v, str):
@@ -803,11 +805,15 @@ class Element2(MBEntity):
         s = s + ';\n'
         return s
     
-class AngularAccelerationJoint(Element2):
+class AngularAcceleration(Element2):
     """
     This joint imposes the absolute angular acceleration of a node about a given axis.
-    """  
-    node_label: Union[Integral, MBVar]
+    """
+    model_config = {
+        'arbitrary_types_allowed': True
+    }
+
+    node_label: Union[int, MBVar]
     relative_direction: List[Union[int, float, MBVar]]
     acceleration: Union['DriveCaller', 'DriveCaller2']
 
@@ -834,7 +840,11 @@ class AngularVelocity(Element2):
     """
     Represents a joint imposing the absolute angular velocity of a node about a given axis.
     """
-    node_label: Union[Integral, MBVar]
+    model_config = {
+        'arbitrary_types_allowed': True
+    }
+
+    node_label: Union[int, MBVar]
     relative_direction: List[Union[int, float, MBVar]]
     velocity: Union['DriveCaller', 'DriveCaller2']
 
@@ -861,10 +871,14 @@ class AxialRotation(Element2):
     """
     This joint is equivalent to a revolute hinge, but the angular velocity about axis 3 is imposed by means of the driver.
     """
-    node_1_label: Union[Integral, MBVar]
+    model_config = {
+        'arbitrary_types_allowed': True
+    }
+
+    node_1_label: Union[int, MBVar]
     position_1: Position2
     orientation_mat_1: Position2
-    node_2_label: Union[Integral, MBVar]
+    node_2_label: Union[int, MBVar]
     position_2: Position2
     orientation_mat_2: Position2
     angular_velocity: Union['DriveCaller', 'DriveCaller2']
@@ -888,11 +902,15 @@ class BeamSlider(Element2):
     """
     This joint implements a slider, e.g. it constrains a structural node on a string of three-node beams.
     """
-    slider_node_label: Union[Integral, MBVar]
+    model_config = {
+        'arbitrary_types_allowed': True  # Allow arbitrary types such as Beam
+    }
+
+    slider_node_label: Union[int, MBVar]
     position: Position2
     orientation: Optional[Position2]
     slider_type: Optional[str] = None  # should be one of 'spherical', 'classic', or 'spline'
-    beam_number: Union[Integral, MBVar]
+    beam_number: Union[int, MBVar]
     three_node_beam: 'Beam'
     first_node_offset: Union[str, Position2]
     first_node_orientation: Optional[Union[str, Position2]]
@@ -902,7 +920,7 @@ class BeamSlider(Element2):
     end_node_orientation: Optional[Union[str, Position2]]
     inital_beam: Optional['Beam']
     initial_node: Optional[Union[Node2, Node]]
-    smearing_factor: Optional[Union[float, MBVar, Integral]]
+    smearing_factor: Optional[Union[float, MBVar, int]]
 
     def element_type(self):
         return 'joint'
@@ -951,15 +969,18 @@ class Brake(Element2):
     nodes about an axis. The frictional torque depends on the normal force that is applied as an external
     input by means of the same friction models implemented for regular joints.
     """
+    model_config = {
+        'arbitrary_types_allowed': True
+    }
 
-    node_1_label: Union[Integral, MBVar]
+    node_1_label: Union[int, MBVar]
     position_1: Position2
     orientation_mat_1: Optional[Position2] = None
-    node_2_label: Union[Integral, MBVar]
+    node_2_label: Union[int, MBVar]
     position_2: Position2
     orientation_mat_2: Optional[Position2] = None
     average_radius: Union[float, MBVar]
-    preload: Optional[Union[float, MBVar, Integral]] = None
+    preload: Optional[Union[float, MBVar, int]] = None
     friction_model: str  # TODO: Check if the check is correct
     shape_function: str  # TODO: Check if the check is correct
     normal_force: Union['DriveCaller', 'DriveCaller2']
@@ -983,6 +1004,123 @@ class Brake(Element2):
         s += f''',\n\t{self.normal_force}'''
         s += self.element_footer()
         return s
+    
+class CardanoPin(Element2):
+    """
+    This joint implements a 'Cardano' joint between a node and the ground.
+    The absolute position is also constrained.
+    """
+
+    node_label: Union[int, MBVar]
+    position: Position2
+    orientation_mat: Optional[Position2] = None
+    absolute_pin_position: Position2
+    absolute_pin_orientation_mat: Optional[Position2] = None
+
+    def element_type(self):
+        return 'joint'
+
+    def __str__(self):
+        s = f'{self.element_header()}, cardano pin'
+        s += f',\n\t{self.node_label},'
+        s += f'\n\t\tposition, {self.position}'
+        if self.orientation_mat is not None:
+            s += f',\n\t\torientation, {self.orientation_mat}'
+        s += f',\n\tposition, {self.absolute_pin_position}'
+        if self.absolute_pin_orientation_mat is not None:
+            s += f',\n\torientation, {self.absolute_pin_orientation_mat}'
+        s += self.element_footer()
+        return s
+
+class CardanoRotation(Element2):
+    """
+    This joint implements a 'Cardano' joint, which is made of a sequence of two orthogonal revolute hinges.
+    The relative position is not constrained.
+    """
+
+    node_1_label: Union[int, MBVar]
+    orientation_mat_1: Optional[Position2] = None
+    node_2_label: Union[int, MBVar]
+    orientation_mat_2: Optional[Position2] = None
+
+    def element_type(self):
+        return 'joint'
+
+    def __str__(self):
+        s = f'{self.element_header()}, cardano rotation'
+        s += f',\n\t{self.node_1_label}'
+        if self.orientation_mat_1 is not None:
+            s += f',\n\t\torientation, {self.orientation_mat_1}'
+        s += f',\n\t{self.node_2_label}'
+        if self.orientation_mat_2 is not None:
+            s += f',\n\t\torientation, {self.orientation_mat_2}'
+        s += self.element_footer()
+        return s
+
+# class DeformableAxial(Element2):
+#     """
+#     This joint implements a configuration dependent moment that is exchanged between two nodes about
+#     an axis rigidly attached to the first node. 
+#     """
+
+#     node_1_label: Union[int, MBVar]
+#     position_1: Optional[Position2] = None
+#     orientation_mat_1: Optional[Position2] = None
+#     node_2_label: Union[int, MBVar]
+#     position_2: Optional[Position2] = None
+#     orientation_mat_2: Optional[Position2] = None
+#     const_law: Union['ConstitutiveLaw', 'NamedConstitutiveLaw']
+
+#     def element_type(self):
+#         return 'joint'
+
+#     def __str__(self):
+#         s = f'{self.element_header()}, deformable axial'
+#         s += f',\n\t{self.node_1_label}'
+#         if self.position_1 is not None:
+#             s += f',\n\t\tposition, {self.position_1}'
+#         if self.orientation_mat_1 is not None:
+#             s += f',\n\t\torientation, {self.orientation_mat_1}'
+#         s += f',\n\t{self.node_2_label}'
+#         if self.position_2 is not None:
+#             s += f',\n\t\tposition, {self.position_2}'
+#         if self.orientation_mat_2 is not None:
+#             s += f',\n\t\torientation, {self.orientation_mat_2}'
+#         s += f',\n\t{self.const_law}'
+#         s += self.element_footer()
+#         return s
+    
+# class DeformableHinge2(Element2):
+#     """
+#     This joint implements a configuration dependent moment that is exchanged between two nodes. The
+#     moment may depend, by way of a generic 3D constitutive law, on the relative orientation and angular
+#     velocity of the two nodes, expressed in the reference frame of node 1.
+#     """
+
+#     node_1_label: Union[int, MBVar]
+#     position_1: Optional[Position2] = None
+#     orientation_mat_1: Optional[Position2] = None
+#     node_2_label: Union[int, MBVar]
+#     position_2: Optional[Position2] = None
+#     orientation_mat_2: Optional[Position2] = None
+#     const_law: Union['ConstitutiveLaw', 'NamedConstitutiveLaw']
+    
+#     def __str__(self):
+#         s = f'{self.element_header()}, deformable hinge'
+#         s += f',\n\t{self.node_1_label}'
+#         if self.position_1 is not None:
+#             s += f',\n\t\tposition, {self.position_1}'
+#         if self.orientation_mat_1 is not None:
+#             s += f',\n\t\torientation, {self.orientation_mat_1}'
+#         s += f',\n\t{self.node_2_label}'
+#         if self.position_2 is not None:
+#             s += f',\n\t\tposition, {self.position_2}'
+#         if self.orientation_mat_2 is not None:
+#             s += f',\n\t\torientation, {self.orientation_mat_2}'
+#         s += f',\n\t{self.const_law}'
+#         s += self.element_footer()
+#         return s
+
 
 class Body(Element):
     def __init__(self, idx, node, mass, position, inertial_matrix, inertial = null,
@@ -1788,7 +1926,7 @@ class Beam(Element):
         s = s + ';\n'
         return s
     
-    BeamSlider.model_rebuild()
+BeamSlider.model_rebuild()
 
 class AerodynamicBody(Element):
     def __init__(self, idx, node, 
@@ -2034,7 +2172,7 @@ class NodeDof:
         return s
 
 # Drives
-class DriveCaller:
+class DriveCaller():
     idx = -1
 
 # TODO: Rename to DriveCaller when all are moved
@@ -2072,11 +2210,6 @@ class DriveCaller2(MBEntity):
             return f'drive caller: {self.idx}, {self.drive_type()}'
         else:
             return self.drive_type()
-
-AngularAccelerationJoint.model_rebuild()
-AngularVelocity.model_rebuild()
-AxialRotation.model_rebuild()
-Brake.model_rebuild()
 
 class ArrayDriveCaller(DriveCaller):
     type = 'array'
@@ -4134,7 +4267,12 @@ class UnitDriveCaller(DriveCaller):
         return s
     
 class TplDriveCaller(DriveCaller2):
-    pass 
+    pass
+
+AngularAcceleration.model_rebuild()
+AngularVelocity.model_rebuild()
+AxialRotation.model_rebuild()
+Brake.model_rebuild()
 
 
 class ConstitutiveLaw(MBEntity):
@@ -5004,6 +5142,35 @@ class InvariantAngularWrapper(ConstitutiveLaw):
         base_str += f',\n\t{self.xi}'
         base_str += f',\n\t{str(self.wrapped_const_law)}'
         return base_str
+    
+class NamedConstitutiveLaw:
+    """
+    Class to encapsulate logic for handling named constitutive laws.
+    Issues a warning if the input is not a ConstitutiveLaw instance.
+    """
+
+    def __init__(self, law: Union[str, list]):
+        if isinstance(law, str):
+            warnings.warn(
+                "Using a string for constitutive laws is not recommended."
+                "Consider using ConstitutiveLaw instances for better support.",
+                UserWarning
+            )
+            self.law = law
+        elif isinstance(law, list):
+            warnings.warn(
+                "Using a list for constitutive laws is not recommended."
+                "Consider using ConstitutiveLaw instances for better support.",
+                UserWarning
+            )
+            self.law = ', '.join(str(i) for i in law)
+
+    def __str__(self):
+        return self.law
+
+# DeformableAxial.model_rebuild()
+# DeformableHinge2.model_rebuild()
+
 
 class FileDriver(MBEntity):
     """
