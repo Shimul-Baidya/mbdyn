@@ -1057,71 +1057,6 @@ class CardanoRotation(Element2):
         s += self.element_footer()
         return s
 
-# class DeformableAxial(Element2):
-#     """
-#     This joint implements a configuration dependent moment that is exchanged between two nodes about
-#     an axis rigidly attached to the first node. 
-#     """
-
-#     node_1_label: Union[int, MBVar]
-#     position_1: Optional[Position2] = None
-#     orientation_mat_1: Optional[Position2] = None
-#     node_2_label: Union[int, MBVar]
-#     position_2: Optional[Position2] = None
-#     orientation_mat_2: Optional[Position2] = None
-#     const_law: Union['ConstitutiveLaw', 'NamedConstitutiveLaw']
-
-#     def element_type(self):
-#         return 'joint'
-
-#     def __str__(self):
-#         s = f'{self.element_header()}, deformable axial'
-#         s += f',\n\t{self.node_1_label}'
-#         if self.position_1 is not None:
-#             s += f',\n\t\tposition, {self.position_1}'
-#         if self.orientation_mat_1 is not None:
-#             s += f',\n\t\torientation, {self.orientation_mat_1}'
-#         s += f',\n\t{self.node_2_label}'
-#         if self.position_2 is not None:
-#             s += f',\n\t\tposition, {self.position_2}'
-#         if self.orientation_mat_2 is not None:
-#             s += f',\n\t\torientation, {self.orientation_mat_2}'
-#         s += f',\n\t{self.const_law}'
-#         s += self.element_footer()
-#         return s
-    
-# class DeformableHinge2(Element2):
-#     """
-#     This joint implements a configuration dependent moment that is exchanged between two nodes. The
-#     moment may depend, by way of a generic 3D constitutive law, on the relative orientation and angular
-#     velocity of the two nodes, expressed in the reference frame of node 1.
-#     """
-
-#     node_1_label: Union[int, MBVar]
-#     position_1: Optional[Position2] = None
-#     orientation_mat_1: Optional[Position2] = None
-#     node_2_label: Union[int, MBVar]
-#     position_2: Optional[Position2] = None
-#     orientation_mat_2: Optional[Position2] = None
-#     const_law: Union['ConstitutiveLaw', 'NamedConstitutiveLaw']
-    
-#     def __str__(self):
-#         s = f'{self.element_header()}, deformable hinge'
-#         s += f',\n\t{self.node_1_label}'
-#         if self.position_1 is not None:
-#             s += f',\n\t\tposition, {self.position_1}'
-#         if self.orientation_mat_1 is not None:
-#             s += f',\n\t\torientation, {self.orientation_mat_1}'
-#         s += f',\n\t{self.node_2_label}'
-#         if self.position_2 is not None:
-#             s += f',\n\t\tposition, {self.position_2}'
-#         if self.orientation_mat_2 is not None:
-#             s += f',\n\t\torientation, {self.orientation_mat_2}'
-#         s += f',\n\t{self.const_law}'
-#         s += self.element_footer()
-#         return s
-
-
 class Body(Element):
     def __init__(self, idx, node, mass, position, inertial_matrix, inertial = null,
             output = 'yes'):
@@ -5142,34 +5077,6 @@ class InvariantAngularWrapper(ConstitutiveLaw):
         base_str += f',\n\t{self.xi}'
         base_str += f',\n\t{str(self.wrapped_const_law)}'
         return base_str
-    
-class NamedConstitutiveLaw:
-    """
-    Class to encapsulate logic for handling named constitutive laws.
-    Issues a warning if the input is not a ConstitutiveLaw instance.
-    """
-
-    def __init__(self, law: Union[str, list]):
-        if isinstance(law, str):
-            warnings.warn(
-                "Using a string for constitutive laws is not recommended."
-                "Consider using ConstitutiveLaw instances for better support.",
-                UserWarning
-            )
-            self.law = law
-        elif isinstance(law, list):
-            warnings.warn(
-                "Using a list for constitutive laws is not recommended."
-                "Consider using ConstitutiveLaw instances for better support.",
-                UserWarning
-            )
-            self.law = ', '.join(str(i) for i in law)
-
-    def __str__(self):
-        return self.law
-
-# DeformableAxial.model_rebuild()
-# DeformableHinge2.model_rebuild()
 
 
 class FileDriver(MBEntity):
