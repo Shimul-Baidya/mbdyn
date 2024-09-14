@@ -558,6 +558,337 @@ class TestCardanoRotation(unittest.TestCase):
                 node_1_label=self.node_1_label,
                 node_2_label="invalid_label"  # Invalid type for node_2_label
             )
+
+class TestDeformableAxial(unittest.TestCase):
+
+    def setUp(self):
+        self.node_1_label = 1
+        self.node_2_label = 2
+
+        # Optional values for testing with positions and orientations
+        self.position_1 = l.Position2(
+            relative_position=[1.0, 0.0, 0.0],
+            reference=''
+        )
+        self.orientation_mat_1 = l.Position2(
+            relative_position=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+            reference='node'
+        )
+        self.position_2 = l.Position2(
+            relative_position=[0.0, 1.0, 0.0],
+            reference='global'
+        )
+        self.orientation_mat_2 = l.Position2(
+            relative_position=[[0.0, 1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]],
+            reference='node'
+        )
+
+        # Example constitutive laws
+        self.linear_elastic = l.LinearElastic(
+            idx=1,
+            law_type=l.ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW,
+            stiffness=2000
+        )
+        
+        self.linear_elastic_generic = l.LinearElasticGeneric(
+            idx=2,
+            law_type=l.ConstitutiveLaw.LawType.D3_ISOTROPIC_LAW,
+            stiffness=[[1.0, 0.3, 0.0], [0.3, 1.0, 0.0], [0.0, 0.0, 1.0]]
+        )
+        
+        self.named_const_law = l.NamedConstitutiveLaw("example_named_law")
+        self.named_const_law2 = l.NamedConstitutiveLaw(["example_named_law", 1000.0])
+
+        # Initialize DeformableAxial with required fields
+        self.deformable_axial = l.DeformableAxial(
+            idx=1,
+            node_1_label=self.node_1_label,
+            node_2_label=self.node_2_label,
+            const_law=self.linear_elastic
+        )
+
+    def test_initialization(self):
+        # Test that the DeformableAxial initializes correctly with provided values
+        self.assertEqual(self.deformable_axial.node_1_label, self.node_1_label)
+        self.assertEqual(self.deformable_axial.node_2_label, self.node_2_label)
+        self.assertIsNone(self.deformable_axial.position_1)
+        self.assertIsNone(self.deformable_axial.orientation_mat_1)
+        self.assertIsNone(self.deformable_axial.position_2)
+        self.assertIsNone(self.deformable_axial.orientation_mat_2)
+        self.assertEqual(self.deformable_axial.const_law, self.linear_elastic)
+        self.assertEqual(self.deformable_axial.idx, 1)
+        self.assertEqual(self.deformable_axial.output, 'yes')
+
+    def test_str_representation_without_optional(self):
+        # Test the string output when optional positions and orientations are not provided
+        expected_str = (
+            f'{self.deformable_axial.element_header()}, deformable axial,\n\t{self.node_1_label},'
+            f'\n\t{self.node_2_label},'
+            f'\n\t{self.linear_elastic}'
+            f'{self.deformable_axial.element_footer()}'
+        )
+        self.assertEqual(str(self.deformable_axial), expected_str)
+
+    def test_str_representation_with_optional(self):
+        # Initialize with optional positions and orientations
+        deformable_axial_with_optional = l.DeformableAxial(
+            idx=2,
+            output='no',
+            node_1_label=self.node_1_label,
+            position_1=self.position_1,
+            orientation_mat_1=self.orientation_mat_1,
+            node_2_label=self.node_2_label,
+            position_2=self.position_2,
+            orientation_mat_2=self.orientation_mat_2,
+            const_law=self.linear_elastic_generic
+        )
+
+        expected_str = (
+            f'{deformable_axial_with_optional.element_header()}, deformable axial,\n\t{self.node_1_label},'
+            f'\n\t\tposition, {self.position_1},'
+            f'\n\t\torientation, {self.orientation_mat_1},'
+            f'\n\t{self.node_2_label},'
+            f'\n\t\tposition, {self.position_2},'
+            f'\n\t\torientation, {self.orientation_mat_2},'
+            f'\n\t{self.linear_elastic_generic}'
+            f'{deformable_axial_with_optional.element_footer()}'
+        )
+        self.assertEqual(str(deformable_axial_with_optional), expected_str)
+
+    def test_optional_none_handling(self):
+        # Test to check that None is handled correctly for optional positions and orientations
+        deformable_axial_without_optional = l.DeformableAxial(
+            idx=3,
+            node_1_label=self.node_1_label,
+            node_2_label=self.node_2_label,
+            const_law=self.named_const_law2
+        )
+
+        # Assert that optional parameters remain None
+        self.assertIsNone(deformable_axial_without_optional.position_1)
+        self.assertIsNone(deformable_axial_without_optional.orientation_mat_1)
+        self.assertIsNone(deformable_axial_without_optional.position_2)
+        self.assertIsNone(deformable_axial_without_optional.orientation_mat_2)
+
+    def test_invalid_node_labels(self):
+        # Test that passing invalid node labels raises the appropriate error
+        with self.assertRaises(Exception):
+            l.DeformableAxial(
+                idx=4,
+                node_1_label="invalid_label",  # Invalid type for node_1_label
+                node_2_label=self.node_2_label,
+                const_law=self.linear_elastic
+            )
+
+        with self.assertRaises(Exception):
+            l.DeformableAxial(
+                idx=5,
+                node_1_label=self.node_1_label,
+                node_2_label="invalid_label",  # Invalid type for node_2_label
+                const_law=self.linear_elastic
+            )
+
+    def test_invalid_const_law(self):
+        # Test that passing an invalid const_law raises the appropriate error
+        with self.assertRaises(Exception):
+            l.DeformableAxial(
+                idx=6,
+                node_1_label=self.node_1_label,
+                node_2_label=self.node_2_label,
+                const_law="invalid_const_law"  # Invalid type for const_law, users have to use NamedConstitutiveLaw for custom Const Laws
+            )
+
+    def test_named_constitutive_law(self):
+        # Test with NamedConstitutiveLaw
+        deformable_axial_with_named_law = l.DeformableAxial(
+            idx=7,
+            output='yes',
+            node_1_label=self.node_1_label,
+            node_2_label=self.node_2_label,
+            const_law=self.named_const_law
+        )
+
+        expected_str = (
+            f'{deformable_axial_with_named_law.element_header()}, deformable axial,\n\t{self.node_1_label},'
+            f'\n\t{self.node_2_label},'
+            f'\n\t{self.named_const_law}'
+            f'{deformable_axial_with_named_law.element_footer()}'
+        )
+        self.assertEqual(str(deformable_axial_with_named_law), expected_str)
+
+    def test_named_constitutive_law2(self):
+        # Test with the second NamedConstitutiveLaw instance
+        deformable_axial_with_named_law2 = l.DeformableAxial(
+            idx=8,
+            output='no',
+            node_1_label=self.node_1_label,
+            node_2_label=self.node_2_label,
+            const_law=self.named_const_law2
+        )
+
+        expected_str = (
+            f'{deformable_axial_with_named_law2.element_header()}, deformable axial,\n\t{self.node_1_label},'
+            f'\n\t{self.node_2_label},'
+            f'\n\t{self.named_const_law2}'
+            f'{deformable_axial_with_named_law2.element_footer()}'
+        )
+        self.assertEqual(str(deformable_axial_with_named_law2), expected_str)
+
+    def test_warning_for_named_constitutive_law(self):
+        # Test if a warning is issued when using a string for constitutive law
+        with self.assertWarns(Warning):
+            l.DeformableAxial(
+                idx=9,
+                node_1_label=self.node_1_label,
+                node_2_label=self.node_2_label,
+                const_law=l.NamedConstitutiveLaw("Some const law")
+            )
+
+class TestDeformableHinge2(unittest.TestCase):
+
+    def setUp(self):
+        self.node_1_label = 1
+        self.node_2_label = 2
+
+        # Optional values for testing with positions and orientations
+        self.position_1 = l.Position2(
+            relative_position=[1.0, 0.0, 0.0],
+            reference=''
+        )
+        self.orientation_mat_1 = l.Position2(
+            relative_position=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+            reference='node'
+        )
+        self.position_2 = l.Position2(
+            relative_position=[0.0, 1.0, 0.0],
+            reference='global'
+        )
+        self.orientation_mat_2 = l.Position2(
+            relative_position=[[0.0, 1.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]],
+            reference='node'
+        )
+
+        # Example constitutive laws
+        self.linear_elastic = l.LinearElastic(
+            idx=1,
+            law_type=l.ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW,
+            stiffness=2000
+        )
+        
+        self.named_const_law = l.NamedConstitutiveLaw("example_named_law")
+
+        # Initialize DeformableHinge2 with required fields
+        self.deformable_hinge2 = l.DeformableHinge2(
+            idx=1,
+            node_1_label=self.node_1_label,
+            node_2_label=self.node_2_label,
+            const_law=self.linear_elastic
+        )
+
+    def test_initialization(self):
+        # Test that the DeformableHinge2 initializes correctly with provided values
+        self.assertEqual(self.deformable_hinge2.node_1_label, self.node_1_label)
+        self.assertEqual(self.deformable_hinge2.node_2_label, self.node_2_label)
+        self.assertIsNone(self.deformable_hinge2.position_1)
+        self.assertIsNone(self.deformable_hinge2.orientation_mat_1)
+        self.assertIsNone(self.deformable_hinge2.position_2)
+        self.assertIsNone(self.deformable_hinge2.orientation_mat_2)
+        self.assertEqual(self.deformable_hinge2.const_law, self.linear_elastic)
+        self.assertEqual(self.deformable_hinge2.idx, 1)
+
+    def test_str_representation_without_optional(self):
+        # Test the string output when optional positions and orientations are not provided
+        expected_str = (
+            f'{self.deformable_hinge2.element_header()}, deformable hinge'
+            f',\n\t{self.node_1_label},'
+            f'\n\t{self.node_2_label},'
+            f'\n\t{self.linear_elastic}'
+            f'{self.deformable_hinge2.element_footer()}'
+        )
+        self.assertEqual(str(self.deformable_hinge2), expected_str)
+
+    def test_str_representation_with_optional(self):
+        # Initialize with optional positions and orientations
+        deformable_hinge2_with_optional = l.DeformableHinge2(
+            idx=2,
+            node_1_label=self.node_1_label,
+            position_1=self.position_1,
+            orientation_mat_1=self.orientation_mat_1,
+            node_2_label=self.node_2_label,
+            position_2=self.position_2,
+            orientation_mat_2=self.orientation_mat_2,
+            const_law=self.named_const_law
+        )
+
+        expected_str = (
+            f'{deformable_hinge2_with_optional.element_header()}, deformable hinge'
+            f',\n\t{self.node_1_label},'
+            f'\n\t\tposition, {self.position_1},'
+            f'\n\t\torientation, {self.orientation_mat_1},'
+            f'\n\t{self.node_2_label},'
+            f'\n\t\tposition, {self.position_2},'
+            f'\n\t\torientation, {self.orientation_mat_2},'
+            f'\n\t{self.named_const_law}'
+            f'{deformable_hinge2_with_optional.element_footer()}'
+        )
+        self.assertEqual(str(deformable_hinge2_with_optional), expected_str)
+
+    def test_optional_none_handling(self):
+        # Test to check that None is handled correctly for optional positions and orientations
+        deformable_hinge2_without_optional = l.DeformableHinge2(
+            idx=3,
+            node_1_label=self.node_1_label,
+            node_2_label=self.node_2_label,
+            const_law=self.named_const_law
+        )
+
+        # Assert that optional parameters remain None
+        self.assertIsNone(deformable_hinge2_without_optional.position_1)
+        self.assertIsNone(deformable_hinge2_without_optional.orientation_mat_1)
+        self.assertIsNone(deformable_hinge2_without_optional.position_2)
+        self.assertIsNone(deformable_hinge2_without_optional.orientation_mat_2)
+
+    def test_invalid_node_labels(self):
+        # Test that passing invalid node labels raises the appropriate error
+        with self.assertRaises(Exception):
+            l.DeformableHinge2(
+                idx=4,
+                node_1_label="invalid_label",  # Invalid type for node_1_label
+                node_2_label=self.node_2_label,
+                const_law=self.linear_elastic
+            )
+
+        with self.assertRaises(Exception):
+            l.DeformableHinge2(
+                idx=5,
+                node_1_label=self.node_1_label,
+                node_2_label="invalid_label",  # Invalid type for node_2_label
+                const_law=self.linear_elastic
+            )
+
+    def test_invalid_const_law(self):
+        # Test that passing an invalid const_law raises the appropriate error
+        with self.assertRaises(Exception):
+            l.DeformableHinge2(
+                idx=6,
+                node_1_label=self.node_1_label,
+                node_2_label=self.node_2_label,
+                const_law="invalid_const_law"  # Invalid type for const_law
+            )
+
+class TestNamedConstitutiveLaw(unittest.TestCase):
+
+    def test_string_input(self):
+        with self.assertWarns(UserWarning) as cm:
+            law = l.NamedConstitutiveLaw("linear elastic")
+        self.assertEqual(str(law), "linear elastic")
+        self.assertIn("Using a string for constitutive laws is not recommended.", str(cm.warning))
+
+    def test_list_input(self):
+        with self.assertWarns(UserWarning) as cm:
+            law = l.NamedConstitutiveLaw(["linear elastic", "viscoelastic"])
+        self.assertEqual(str(law), "linear elastic, viscoelastic")
+        self.assertIn("Using a list for constitutive laws is not recommended.", str(cm.warning))
         
 if __name__ == '__main__':
     unittest.main()
