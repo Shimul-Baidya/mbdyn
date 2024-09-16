@@ -1486,6 +1486,391 @@ class TestNamedConstitutiveLaw(unittest.TestCase):
             law = l.NamedConstitutiveLaw(["linear elastic", "viscoelastic"])
         self.assertEqual(str(law), "linear elastic, viscoelastic")
         self.assertIn("Using a list for constitutive laws is not recommended.", str(cm.warning))
+
+class TestDistance(unittest.TestCase):
+    def setUp(self):
+        # Common variables used in tests
+        self.node_1_label = 1
+        self.node_2_label = 2
+        self.position_1 = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='global')
+        self.position_2 = l.Position2(relative_position=[1.0, 1.0, 1.0], reference='global')
+        self.distance_drive = l.ConstDriveCaller(const_value=5.0)
+
+    def test_distance_creation_valid(self):
+        # Test creating a Distance instance with valid data
+        distance_joint = l.Distance(
+            node_1_label=self.node_1_label,
+            position_1=self.position_1,
+            node_2_label=self.node_2_label,
+            position_2=self.position_2,
+            distance=self.distance_drive,
+            idx=10,
+            output='yes'
+        )
+        self.assertIsInstance(distance_joint, l.Distance)
+        self.assertEqual(distance_joint.node_1_label, self.node_1_label)
+        self.assertEqual(str(distance_joint.distance), 'const, 5.0')
+
+    def test_distance_creation_with_from_nodes(self):
+        # Test creating a Distance instance with 'from nodes' as distance
+        distance_joint = l.Distance(
+            node_1_label=self.node_1_label,
+            node_2_label=self.node_2_label,
+            distance='from nodes',
+            idx=10
+        )
+        self.assertIsInstance(distance_joint, l.Distance)
+        self.assertEqual(distance_joint.distance, 'from nodes')
+
+    def test_distance_creation_missing_positions(self):
+        # Test creating a Distance instance without positions
+        distance_joint = l.Distance(
+            node_1_label=self.node_1_label,
+            node_2_label=self.node_2_label,
+            distance=self.distance_drive,
+            idx=10
+        )
+        self.assertIsInstance(distance_joint, l.Distance)
+        self.assertIsNone(distance_joint.position_1)
+        self.assertIsNone(distance_joint.position_2)
+
+    def test_distance_creation_invalid_distance_string(self):
+        # Test creating a Distance instance with an invalid distance string
+        with self.assertRaises(ValueError):
+            l.Distance(
+                node_1_label=self.node_1_label,
+                node_2_label=self.node_2_label,
+                distance='invalid_string'
+            )
+
+    def test_distance_str_method(self):
+        # Test the __str__ method of Distance
+        distance_joint = l.Distance(
+            node_1_label=self.node_1_label,
+            position_1=self.position_1,
+            node_2_label=self.node_2_label,
+            position_2=self.position_2,
+            distance=self.distance_drive,
+            idx=10,
+            output='yes'
+        )
+        expected_str = (
+            f'{distance_joint.element_header()}, distance'
+            f',\n\t{self.node_1_label}, position, {self.position_1}'
+            f',\n\t{self.node_2_label}, position, {self.position_2}'
+            f',\n\t{self.distance_drive}'
+            f'{distance_joint.element_footer()}'
+        )
+        self.maxDiff=None
+        self.assertEqual(str(distance_joint), expected_str)
+
+    def test_distance_output_option(self):
+        # Test setting the output option to 'no'
+        distance_joint = l.Distance(
+            idx=10,
+            node_1_label=self.node_1_label,
+            node_2_label=self.node_2_label,
+            distance=self.distance_drive,
+            output='no'
+        )
+        self.assertEqual(distance_joint.output, 'no')
+        self.assertIn(',\n\toutput, no', str(distance_joint))
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_distance_missing_required_field(self):
+        # Test creating a Distance instance missing a required field (distance)
+        with self.assertRaises(Exception):
+            l.Distance(
+                node_1_label=self.node_1_label,
+                node_2_label=self.node_2_label
+                # Missing distance
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_distance_invalid_distance_type(self):
+        # Test passing an invalid type for distance
+        with self.assertRaises(Exception):
+            l.Distance(
+                node_1_label=self.node_1_label,
+                node_2_label=self.node_2_label,
+                distance=123  # Invalid type, should be DriveCaller2 or 'from nodes'
+            )
+    # TODO: First check if the <MBVar> class definition has any errors 
+    # def test_distance_with_mbvar_nodes(self):
+    # # Test creating a Distance instance with MBVar as node labels
+    #     node_var_1 = l.MBVar(name='node_var_1', var_type='integer', expression=100)
+    #     node_var_2 = l.MBVar(name='node_var_2', var_type='integer', expression=200)
+    #     distance_joint = l.Distance(
+    #         node_1_label=node_var_1,
+    #         node_2_label=node_var_2,
+    #         distance=self.distance_drive
+    #     )
+    #     self.assertEqual(distance_joint.node_1_label, node_var_1)
+    #     self.assertEqual(distance_joint.node_2_label, node_var_2)
+
+class TestDriveDisplacement(unittest.TestCase):
+    # TODO: Implement 'TplDriveCaller' first
+    pass
+
+class TestDriveDisplacementPin(unittest.TestCase):
+    # TODO: Implement 'TplDriveCaller' first
+    pass
+
+class TestDriveHinge(unittest.TestCase):
+    # TODO: Implement 'TplDriveCaller' first
+    pass
+
+class TestGimbalRotation(unittest.TestCase):
+    def setUp(self):
+        # Common variables used in tests
+        self.node_1_label = 1
+        self.node_2_label = 2
+        self.relative_orientation_mat_1 = l.Position2(relative_position=[0.0, 0.0, 1.0], reference='global')
+        self.relative_orientation_mat_2 = l.Position2(relative_position=[1.0, 0.0, 0.0], reference='global')
+        self.orientation_description = "euler123"
+
+    def test_gimbal_rotation_creation_valid(self):
+        # Test creating a GimbalRotation instance with valid data
+        gimbal_rotation = l.GimbalRotation(
+            node_1_label=self.node_1_label,
+            relative_orientation_mat_1=self.relative_orientation_mat_1,
+            node_2_label=self.node_2_label,
+            relative_orientation_mat_2=self.relative_orientation_mat_2,
+            orientation_description=self.orientation_description,
+            idx=10,
+            output='yes'
+        )
+        self.assertIsInstance(gimbal_rotation, l.GimbalRotation)
+        self.assertEqual(gimbal_rotation.node_1_label, self.node_1_label)
+        self.assertEqual(gimbal_rotation.orientation_description, self.orientation_description)
+
+    def test_gimbal_rotation_creation_without_optional_fields(self):
+        # Test creating a GimbalRotation instance without optional fields
+        gimbal_rotation = l.GimbalRotation(
+            node_1_label=self.node_1_label,
+            node_2_label=self.node_2_label,
+            idx=5
+        )
+        self.assertIsInstance(gimbal_rotation, l.GimbalRotation)
+        self.assertEqual(gimbal_rotation.node_1_label, self.node_1_label)
+        self.assertIsNone(gimbal_rotation.relative_orientation_mat_1)
+        self.assertIsNone(gimbal_rotation.orientation_description)
+
+    def test_gimbal_rotation_invalid_orientation_description(self):
+        # Test creating a GimbalRotation instance with invalid orientation_description
+        with self.assertRaises(ValueError) as context:
+            l.GimbalRotation(
+                node_1_label=self.node_1_label,
+                node_2_label=self.node_2_label,
+                orientation_description="invalid_description"
+            )
+        self.assertIn("Invalid orientation description", str(context.exception))
+
+    def test_gimbal_rotation_str_method(self):
+        # Test the __str__ method of GimbalRotation
+        gimbal_rotation = l.GimbalRotation(
+            node_1_label=self.node_1_label,
+            relative_orientation_mat_1=self.relative_orientation_mat_1,
+            node_2_label=self.node_2_label,
+            relative_orientation_mat_2=self.relative_orientation_mat_2,
+            orientation_description=self.orientation_description,
+            idx=10
+        )
+        expected_str = (
+            f'{gimbal_rotation.element_header()}, gimbal rotation'
+            f',\n\t{self.node_1_label}'
+            f', orientation, {self.relative_orientation_mat_1}'
+            f',\n\t{self.node_2_label}'
+            f', orientation, {self.relative_orientation_mat_2}'
+            f',\n\torientation description, {self.orientation_description}'
+            f'{gimbal_rotation.element_footer()}'
+        )
+        self.assertEqual(str(gimbal_rotation), expected_str)
+
+    def test_gimbal_rotation_output_option(self):
+        # Test setting the output option to 'no'
+        gimbal_rotation = l.GimbalRotation(
+            idx=10,
+            node_1_label=self.node_1_label,
+            node_2_label=self.node_2_label,
+            output='no'
+        )
+        self.assertEqual(gimbal_rotation.output, 'no')
+        self.assertIn(',\n\toutput, no', str(gimbal_rotation))
+
+    # TODO: First check if there are any errors in the <MBVar> class
+    # def test_gimbal_rotation_with_mbvar_nodes(self):
+    #     # Test creating a GimbalRotation instance with MBVar as node labels
+    #     node_var_1 = l.MBVar(name='node_var_1', var_type='integer', expression=100)
+    #     node_var_2 = l.MBVar(name='node_var_2', var_type='integer', expression=200)
+    #     gimbal_rotation = l.GimbalRotation(
+    #         node_1_label=node_var_1,
+    #         node_2_label=node_var_2
+    #     )
+    #     self.assertEqual(gimbal_rotation.node_1_label, node_var_1)
+    #     self.assertEqual(gimbal_rotation.node_2_label, node_var_2)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_gimbal_rotation_missing_required_field(self):
+        # Test creating a GimbalRotation instance missing a required field (node_2_label)
+        with self.assertRaises(Exception):
+            l.GimbalRotation(
+                node_1_label=self.node_1_label
+                # Missing node_2_label
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_gimbal_rotation_invalid_relative_orientation_mat(self):
+        # Test passing an invalid type for relative_orientation_mat_1
+        with self.assertRaises(Exception):
+            l.GimbalRotation(
+                node_1_label=self.node_1_label,
+                relative_orientation_mat_1=123,  # Invalid type, should be Position2
+                node_2_label=self.node_2_label
+            )
+
+    def test_gimbal_rotation_orientation_description_none(self):
+        # Test creating a GimbalRotation instance with orientation_description as None
+        gimbal_rotation = l.GimbalRotation(
+            idx=10,
+            node_1_label=self.node_1_label,
+            node_2_label=self.node_2_label,
+            orientation_description=None
+        )
+        self.assertIsNone(gimbal_rotation.orientation_description)
+        self.assertNotIn('orientation description', str(gimbal_rotation))
+
+class TestImposedDisplacement(unittest.TestCase):
+    def setUp(self):
+        # Common variables used in tests
+        self.node_1_label = 1
+        self.node_2_label = 2
+        self.position_1 = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='global')
+        self.position_2 = l.Position2(relative_position=[1.0, 1.0, 1.0], reference='global')
+        self.direction = [1.0, 0.0, 0.0]
+        self.relative_position_drive = l.ConstDriveCaller(const_value=5.0)
+
+    def test_imposed_displacement_creation_valid(self):
+        # Test creating an ImposedDisplacement instance with valid data
+        imposed_displacement = l.ImposedDisplacement(
+            node_1_label=self.node_1_label,
+            position_1=self.position_1,
+            node_2_label=self.node_2_label,
+            position_2=self.position_2,
+            direction=self.direction,
+            relative_position=self.relative_position_drive,
+            idx=10,
+            output='yes'
+        )
+        self.assertIsInstance(imposed_displacement, l.ImposedDisplacement)
+        self.assertEqual(imposed_displacement.node_1_label, self.node_1_label)
+        self.assertEqual(imposed_displacement.direction, self.direction)
+        self.assertEqual(str(imposed_displacement.relative_position), 'const, 5.0')
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_imposed_displacement_missing_required_field(self):
+        # Test creating an ImposedDisplacement instance missing a required field (direction)
+        with self.assertRaises(Exception):
+            l.ImposedDisplacement(
+                node_1_label=self.node_1_label,
+                position_1=self.position_1,
+                node_2_label=self.node_2_label,
+                position_2=self.position_2,
+                relative_position=self.relative_position_drive
+                # Missing direction
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_imposed_displacement_invalid_direction(self):
+        # Test passing an invalid type for direction
+        with self.assertRaises(Exception):
+            l.ImposedDisplacement(
+                node_1_label=self.node_1_label,
+                position_1=self.position_1,
+                node_2_label=self.node_2_label,
+                position_2=self.position_2,
+                direction=[1.0, 0.0],  # Invalid length, should be 3 elements
+                relative_position=self.relative_position_drive
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_imposed_displacement_invalid_relative_position(self):
+        # Test passing an invalid type for relative_position
+        with self.assertRaises(Exception):
+            l.ImposedDisplacement(
+                node_1_label=self.node_1_label,
+                position_1=self.position_1,
+                node_2_label=self.node_2_label,
+                position_2=self.position_2,
+                direction=self.direction,
+                relative_position=123  # Invalid type, should be DriveCaller
+            )
+
+    def test_imposed_displacement_str_method(self):
+        # Test the __str__ method of ImposedDisplacement
+        imposed_displacement = l.ImposedDisplacement(
+            node_1_label=self.node_1_label,
+            position_1=self.position_1,
+            node_2_label=self.node_2_label,
+            position_2=self.position_2,
+            direction=self.direction,
+            relative_position=self.relative_position_drive,
+            idx=10
+        )
+        expected_str = (
+            f'{imposed_displacement.element_header()}, drive displacement'
+            f',\n\t{self.node_1_label}, {self.position_1}'
+            f',\n\t{self.node_2_label}, {self.position_2}'
+            f',\n\t{self.direction}'
+            f',\n\t{self.relative_position_drive}'
+            f'{imposed_displacement.element_footer()}'
+        )
+        self.maxDiff=None
+        self.assertEqual(str(imposed_displacement), expected_str)
+
+    def test_imposed_displacement_output_option(self):
+        # Test setting the output option to 'no'
+        imposed_displacement = l.ImposedDisplacement(
+            idx=10,
+            node_1_label=self.node_1_label,
+            position_1=self.position_1,
+            node_2_label=self.node_2_label,
+            position_2=self.position_2,
+            direction=self.direction,
+            relative_position=self.relative_position_drive,
+            output='no'
+        )
+        self.assertEqual(imposed_displacement.output, 'no')
+        self.assertIn(',\n\toutput, no', str(imposed_displacement))
+
+    # TODO: Check if <MBVar> class has any errors first
+    # def test_imposed_displacement_with_mbvar_nodes(self):
+    #     # Test creating an ImposedDisplacement instance with MBVar as node labels
+    #     node_var_1 = l.MBVar(name='node_var_1', var_type='integer', expression=100)
+    #     node_var_2 = l.MBVar(name='node_var_2', var_type='integer', expression=200)
+    #     imposed_displacement = l.ImposedDisplacement(
+    #         node_1_label=node_var_1,
+    #         position_1=self.position_1,
+    #         node_2_label=node_var_2,
+    #         position_2=self.position_2,
+    #         direction=self.direction,
+    #         relative_position=self.relative_position_drive
+    #     )
+    #     self.assertEqual(imposed_displacement.node_1_label, node_var_1)
+    #     self.assertEqual(imposed_displacement.node_2_label, node_var_2)
+
+    # def test_imposed_displacement_direction_with_mbvars(self):
+    #     # Test passing MBVar instances in the direction vector
+    #     direction = [l.MBVar('dx', 'real', 1.0), l.MBVar('dy', 'real', 0.0), l.MBVar('dz', 'real', 0.0)]
+    #     imposed_displacement = l.ImposedDisplacement(
+    #         node_1_label=self.node_1_label,
+    #         position_1=self.position_1,
+    #         node_2_label=self.node_2_label,
+    #         position_2=self.position_2,
+    #         direction=direction,
+    #         relative_position=self.relative_position_drive
+    #     )
+    #     self.assertEqual(imposed_displacement.direction, direction)
         
 if __name__ == '__main__':
     unittest.main()

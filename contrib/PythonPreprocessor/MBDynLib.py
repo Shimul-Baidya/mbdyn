@@ -67,7 +67,7 @@ declared_MBVars = {}
 MBDynLib_simplify = True
 
 try:
-    from pydantic import BaseModel, ConfigDict, field_validator, FieldValidationInfo, model_validator
+    from pydantic import BaseModel, ConfigDict, Field, field_validator, FieldValidationInfo, model_validator
     class _EntityBase(BaseModel):
         """Configuration for Entity with pydantic available"""
         model_config = ConfigDict(extra='forbid',
@@ -539,7 +539,7 @@ class Position2(MBEntity):
         if not isinstance(v, list):
             return [v]
         return v
-    @field_validator('reference', mode='before')
+    @field_validator('reference')
     def validate_reference(cls, v):
         if isinstance(v, str):
             if v not in {'global', 'node', 'other node', ''}:
@@ -668,7 +668,7 @@ class Node2(MBEntity):
     angular_velocity: Position2
     node_type: str = 'dynamic'
     scale: Optional[Union[str, float, MBVar]] = 'default'
-    output: Optional[Union[Literal['yes', 'no'], bool]] = 'yes'
+    output: Optional[Union[Literal['yes', 'no'], bool, int]] = 'yes'
     def __str__(self):
         s = f"structural: {self.idx}, {self.node_type},\n"
         s += f"\t{self.position},\n"
@@ -717,7 +717,7 @@ class DisplacementNode2(MBEntity):
     velocity: Position2
     node_type: str = 'dynamic'
     scale: Optional[Union[str, float, MBVar]] = 'default'
-    output: Optional[Union[Literal['yes', 'no'], bool]] = 'yes'
+    output: Optional[Union[Literal['yes', 'no'], bool, int]] = 'yes'
     def __str__(self):
         s = f"structural: {self.idx}, {self.node_type} displacement,\n"
         s += f"\t{self.position},\n"
@@ -780,7 +780,7 @@ class Element2(MBEntity):
 
     idx: Union[MBVar, int]
     output: Optional[Union[bool, str, int]] = 'yes'
-    @field_validator('output', mode='before')
+    @field_validator('output')
     def validate_output(cls, v):
         if isinstance(v, str):
             if v not in {'yes', 'no'}:
@@ -814,16 +814,14 @@ class AngularAcceleration(Element2):
     }
 
     node_label: Union[int, MBVar]
-    relative_direction: List[Union[int, float, MBVar]]
+    relative_direction: List[Union[int, float, MBVar]] = Field(..., min_items=3, max_items=3)
     acceleration: Union['DriveCaller', 'DriveCaller2']
 
     def element_type(self):
         return 'joint'
     
-    @field_validator('relative_direction', mode='before')
+    @field_validator('relative_direction')
     def validate_relative_direction(cls, v):
-        if not isinstance(v, list) or len(v) != 3:
-            raise ValueError("relative_direction must be a list of three numbers")
         magnitude = sum(i**2 for i in v) ** 0.5
         if not (0.999 <= magnitude <= 1.001):  # Allowing some tolerance for floating-point precision
             raise ValueError("relative_direction must be a unit vector (magnitude = 1)")
@@ -845,16 +843,14 @@ class AngularVelocity(Element2):
     }
 
     node_label: Union[int, MBVar]
-    relative_direction: List[Union[int, float, MBVar]]
+    relative_direction: List[Union[int, float, MBVar]] = Field(..., min_items=3, max_items=3)
     velocity: Union['DriveCaller', 'DriveCaller2']
 
     def element_type(self):
         return 'joint'
 
-    @field_validator('relative_direction', mode='before')
+    @field_validator('relative_direction')
     def validate_relative_direction(cls, v):
-        if not isinstance(v, list) or len(v) != 3:
-            raise ValueError("relative_direction must be a list of three numbers")
         magnitude = sum(i**2 for i in v) ** 0.5
         if not (0.999 <= magnitude <= 1.001):  # Allowing some tolerance for floating-point precision
             raise ValueError("relative_direction must be a unit vector (magnitude = 1)")
@@ -925,7 +921,7 @@ class BeamSlider(Element2):
     def element_type(self):
         return 'joint'
 
-    @field_validator('slider_type', mode='before')
+    @field_validator('slider_type')
     def validate_slider_type(cls, v):
         allowed_types = {'spherical', 'classic', 'spline'}
         if v is not None and v not in allowed_types:
@@ -1133,6 +1129,192 @@ class DeformableHinge2(Element2):
         if self.orientation_mat_2 is not None:
             s += f',\n\t\torientation, {self.orientation_mat_2}'
         s += f',\n\t{self.const_law}'
+        s += self.element_footer()
+        return s
+
+class Distance(Element2):
+    """
+    This joint forces the distance between two points, each relative to a node, to assume the value indicated
+    by the drive. If no offset is given, the points are coincident with the node themselves.
+    """
+    model_config = {
+        'arbitrary_types_allowed': True
+    }
+    node_1_label: Union[int, MBVar]
+    position_1: Optional[Position2] = None
+    node_2_label: Union[int, MBVar]
+    position_2: Optional[Position2] = None
+    distance: Union['DriveCaller', 'DriveCaller2', str]
+
+    @field_validator('distance')
+    def validate_distance(cls, value):
+        if isinstance(value, str):
+            if value != "from nodes":
+                raise ValueError('Invalid value for distance. It must be "from nodes" if a string.')
+        return value
+    
+    def element_type(self):
+        return 'joint'
+    
+    def __str__(self):
+        s = f'{self.element_header()}, distance'
+        s += f''',\n\t{self.node_1_label}'''
+        if self.position_1 is not None:
+            s += f''', position, {self.position_1}'''
+        s += f''',\n\t{self.node_2_label}'''
+        if self.position_2 is not None:
+            s += f''', position, {self.position_2}'''
+        s += f''',\n\t{self.distance}'''
+        s += self.element_footer()
+        return s
+
+class DriveDisplacement(Element2):
+    '''
+    This joint imposes the relative position between two points optionally offset from two structural nodes,
+    in the form of a vector that expresses the direction of the displacement in the reference frame of node 1,
+    whose amplitude is defined by a drive.
+    '''
+    class Config:
+        arbitrary_types_allowed = True
+
+    node_1_label: Union[int, MBVar]
+    position_1: Position2
+    node_2_label: Union[int, MBVar]
+    position_2: Position2
+    relative_position: 'TplDriveCaller'
+
+    def element_type(self):
+        return 'joint'
+
+    def __str__(self):
+        s = f'{self.element_header()}, drive displacement'
+        s += f''',\n\t{self.node_1_label}, {self.position_1}'''
+        s += f''',\n\t{self.node_2_label}, {self.position_2}'''
+        s += f''',\n\t{self.relative_position}'''
+        s += self.element_footer()
+        return s
+    
+class DriveDisplacementPin(Element2):
+    '''
+    This joint imposes the relative position between two points optionally offset from two structural nodes,
+    in the form of a vector that expresses the direction of the displacement in the reference frame of node 1,
+    whose amplitude is defined by a drive.
+    '''
+    class Config:
+        arbitrary_types_allowed = True
+
+    node_label: Union[int, MBVar]
+    node_offset: Position2
+    offset: Position2
+    position: 'TplDriveCaller'
+
+    def element_type(self):
+        return 'joint'
+
+    def __str__(self):
+        s = f'{self.element_header()}, drive displacement pin'
+        s += f''',\n\t{self.node_label}, {self.node_offset}'''
+        s += f''',\n\t{self.offset}'''
+        s += f''',\n\t{self.position}'''
+        s += self.element_footer()
+        return s
+
+class DriveHinge(Element2):
+    '''
+    This joint imposes the relative orientation between two nodes, in the form of a rotation about an axis
+    whose amplitude is defined by a drive.
+    '''
+    class Config:
+        arbitrary_types_allowed = True
+
+    node_1_label: Union[int, MBVar]
+    relative_orientation_mat_1: Optional[Position2]
+    node_2_label: Union[int, MBVar]
+    relative_orientation_mat_2: Optional[Position2]
+    hinge_orientation: 'TplDriveCaller'
+
+    def element_type(self):
+        return 'joint'
+
+    def __str__(self):
+        s = f'{self.element_header()}, drive hinge'
+        s += f''',\n\t{self.node_1_label}'''
+        if self.relative_orientation_mat_1 is not None:
+            s += f''', orientation, {self.relative_orientation_mat_1}'''
+        s += f''',\n\t{self.node_2_label}'''
+        if self.relative_orientation_mat_2 is not None:
+            s += f''', orientation, {self.relative_orientation_mat_2}'''
+        s += f''',\n\t{self.hinge_orientation}'''
+        s += self.element_footer()
+        return s
+    
+class GimbalRotation(Element2):
+    '''
+    A homokinetic joint without position constraints; this joint, in conjunction with a spherical hinge 
+    joint, should be used to implement an ideal tiltrotor gimbal instead of a cardano
+    rotation. It is equivalent to a series of two Cardano's joints (the cardano hinge) rotated 90 degrees
+    apart, each accounting for half the relative rotation between axis 3 of each side of the joint.
+    '''
+
+    node_1_label: Union[int, MBVar]
+    relative_orientation_mat_1: Optional[Position2] = None
+    node_2_label: Union[int, MBVar]
+    relative_orientation_mat_2: Optional[Position2] = None
+    orientation_description: Optional[str] = Field(
+        None,
+        description="The type of orientation description",
+    )
+
+    @field_validator('orientation_description')
+    def check_orientation_description(cls, v):
+        if v is None:
+            return v  # Field is optional and not provided; no validation needed
+        allowed_values = {"euler123", "euler313", "euler321", "orientation vector", "orientation matrix"}
+        if v not in allowed_values:
+            raise ValueError(f"Invalid orientation description. Must be one of: {', '.join(allowed_values)}")
+        return v
+
+    def element_type(self):
+        return 'joint'
+    
+    def __str__(self):
+        s = f'{self.element_header()}, gimbal rotation'
+        s += f''',\n\t{self.node_1_label}'''
+        if self.relative_orientation_mat_1 is not None:
+            s += f''', orientation, {self.relative_orientation_mat_1}'''
+        s += f''',\n\t{self.node_2_label}'''
+        if self.relative_orientation_mat_2 is not None:
+            s += f''', orientation, {self.relative_orientation_mat_2}'''
+        if self.orientation_description is not None:
+            s += f''',\n\torientation description, {self.orientation_description}'''
+        s += self.element_footer()
+        return s
+
+class ImposedDisplacement(Element2):
+    '''
+    This joint imposes the relative position between two points, optionally offset from two structural nodes,
+    along a given direction that is rigidly attached to the first node. The amplitude of the displacement is
+    defined by a drive.
+    '''
+    class Config:
+        arbitrary_types_allowed = True
+
+    node_1_label: Union[int, MBVar]
+    position_1: Position2
+    node_2_label: Union[int, MBVar]
+    position_2: Position2
+    direction: List[Union[int, float, MBVar]] = Field(..., min_items=3, max_items=3)
+    relative_position: Union['DriveCaller', 'DriveCaller2']
+
+    def element_type(self):
+        return 'joint'
+
+    def __str__(self):
+        s = f'{self.element_header()}, drive displacement'
+        s += f''',\n\t{self.node_1_label}, {self.position_1}'''
+        s += f''',\n\t{self.node_2_label}, {self.position_2}'''
+        s += f''',\n\t{self.direction}'''
+        s += f''',\n\t{self.relative_position}'''
         s += self.element_footer()
         return s
 
@@ -4279,11 +4461,15 @@ class UnitDriveCaller(DriveCaller):
     
 class TplDriveCaller(DriveCaller2):
     pass
+DriveDisplacement.model_rebuild()
+DriveDisplacementPin.model_rebuild()
+DriveHinge.model_rebuild()
 
 AngularAcceleration.model_rebuild()
 AngularVelocity.model_rebuild()
 AxialRotation.model_rebuild()
 Brake.model_rebuild()
+ImposedDisplacement.model_rebuild()
 
 
 class ConstitutiveLaw(MBEntity):
