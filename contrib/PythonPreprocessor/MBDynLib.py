@@ -779,7 +779,7 @@ class Element2(MBEntity):
     """
 
     idx: Union[MBVar, int]
-    output: Union[bool, str, int] = 'yes'
+    output: Optional[Union[bool, str, int]] = 'yes'
     @field_validator('output', mode='before')
     def validate_output(cls, v):
         if isinstance(v, str):
@@ -830,7 +830,7 @@ class AngularAcceleration(Element2):
         return v
     
     def __str__(self):
-        s = f'''{self.element_header()}, angular acceleration joint'''
+        s = f'''{self.element_header()}, angular acceleration'''
         s += f''',\n\t{self.node_label}, {self.relative_direction}'''
         s += f''',\n\t{self.acceleration}'''
         s += self.element_footer()
@@ -918,7 +918,7 @@ class BeamSlider(Element2):
     mid_node_orientation: Optional[Union[str, Position2]]
     end_node_offset: Position2
     end_node_orientation: Optional[Union[str, Position2]]
-    inital_beam: Optional['Beam']
+    initial_beam: Optional['Beam']
     initial_node: Optional[Union[Node2, Node]]
     smearing_factor: Optional[Union[float, MBVar, int]]
 
@@ -937,27 +937,33 @@ class BeamSlider(Element2):
         s += f''',\n\t{self.slider_node_label}'''
         s += f''',\n\t\t{self.position}'''
         if self.orientation is not None:
-            s += f''',\n\t\hinge, {self.orientation}'''
+            s += f''',\n\t\thinge, {self.orientation}'''
         if self.slider_type is not None:
             s += f''',\n\ttype, {self.slider_type}'''
-        s += f''',\n\t{self.beam_number},'''
+        s += f''',\n\t{self.beam_number}'''
         s += f''',\n\t\t{self.three_node_beam}'''
+        if s.endswith(';\n'):
+            s = s[:-2] # Remove the last two characters
         if isinstance(self.first_node_offset, str) and self.first_node_offset == 'same':
             s += f''',\n\t\t\tsame'''
         else:
             s += f''',\n\t\t\t{self.first_node_offset}'''
         if self.first_node_orientation is not None:
-            s += f''',\n\t\t\hinge, {self.first_node_orientation}'''
+            s += f''',\n\t\thinge, {self.first_node_orientation}'''
         s += f''',\n\t\t\t{self.mid_node_offset}'''
         if self.mid_node_orientation is not None:
-            s += f''',\n\t\t\thinge, {self.mid_node_orientation}'''
+            s += f''',\n\t\thinge, {self.mid_node_orientation}'''
         s += f''',\n\t\t\t{self.end_node_offset}'''
         if self.end_node_orientation is not None:
-            s += f''',\n\t\t\thinge, {self.end_node_orientation}'''
+            s += f''',\n\t\thinge, {self.end_node_orientation}'''
         if self.initial_beam is not None:
             s += f''',\n\tinitial beam, {self.initial_beam}'''
+            if s.endswith(';\n'):
+                s = s[:-2]  # Remove the last two characters
         if self.initial_node is not None:
             s += f''',\n\tinitial node, {self.initial_node}'''
+            if s.endswith(';\n'):
+                s = s[:-2]  # Remove the last two characters
         if self.smearing_factor is not None:
             s += f''',\n\tsmearing, {self.smearing_factor}'''
         s += self.element_footer()
@@ -1924,11 +1930,8 @@ class Beam(Element):
         for (node, position, orientation) in zip(self.nodes, self.positions, self.orientations):
             s = s + ',\n\t' + str(node) + ',\n\t\tposition, ' + str(position) + ',\n\t\torientation, ' + str(orientation)
         for (cl_or, cl) in zip(self.const_laws_orientations, self.const_laws):
-            s = s + ',\n\t' + str(cl_or) + ',\n\t' 
-            if isinstance(cl, str):
-                s = s + cl 
-            else: 
-                s  = s + ', '.join(str(i) for i in cl)
+            s = s + ',\n\t' + str(cl_or) + ',\n\t'
+            s += str(cl)
         if self.output != 'yes':
             s = s + ',\n\toutput, ' + str(self.output)
         s = s + ';\n'

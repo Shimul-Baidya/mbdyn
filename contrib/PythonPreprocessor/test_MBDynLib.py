@@ -350,6 +350,603 @@ class TestReference2(unittest.TestCase):
         ref2 = l.Reference2(idx=1, position=pos2, orientation=orient2, velocity=vel2, angular_velocity=angvel2)
         self.assertEqual(str(ref), str(ref2))
 
+class TestAngularAcceleration(unittest.TestCase):
+
+    def test_valid_input(self):
+        """Test that AngularAcceleration works with valid input"""
+        # Valid instance of ConstDriveCaller
+        const_drive = l.ConstDriveCaller(const_value=5.0)
+        
+        # Create an AngularAcceleration instance with valid inputs
+        angular_accel = l.AngularAcceleration(
+            idx=1,
+            node_label=1,
+            relative_direction=[1, 0, 0],
+            acceleration=const_drive
+        )
+        
+        expected_output = '''joint: 1, angular acceleration,\n\t1, [1, 0, 0],\n\tconst, 5.0;\n'''
+        self.assertEqual(str(angular_accel), expected_output)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_invalid_relative_direction_length(self):
+        """Test that AngularAcceleration raises an error for invalid relative_direction length"""
+        const_drive = l.ConstDriveCaller(const_value=5.0)
+
+        # relative_direction must have exactly 3 elements, expect failure
+        with self.assertRaises(Exception):
+            l.AngularAcceleration(
+                idx=1,
+                node_label=1,
+                relative_direction=[1, 0],  # Invalid length
+                acceleration=const_drive
+            )
+
+    def test_invalid_relative_direction_magnitude(self):
+        """Test that AngularAcceleration raises an error for non-unit vector relative_direction"""
+        const_drive = l.ConstDriveCaller(const_value=5.0)
+
+        # relative_direction must be a unit vector (magnitude = 1), expect failure
+        with self.assertRaises(ValueError):
+            l.AngularAcceleration(
+                idx=1,
+                node_label=1,
+                relative_direction=[2, 0, 0],  # Invalid magnitude (not a unit vector)
+                acceleration=const_drive
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_invalid_acceleration_type(self):
+        """Test that AngularAcceleration raises an error for invalid acceleration type"""
+        # Pass an invalid type for acceleration
+        with self.assertRaises(Exception):
+            l.AngularAcceleration(
+                idx=1,
+                node_label=1,
+                relative_direction=[1, 0, 0],
+                acceleration=5  # Invalid type, should be DriveCaller or its subclass
+            )
+
+    def test_optional_output(self):
+        """Test that the 'output' field is optional and defaults to 'yes'"""
+        const_drive = l.ConstDriveCaller(const_value=5.0)
+
+        # Create AngularAcceleration without specifying output
+        angular_accel = l.AngularAcceleration(
+            idx=1,
+            node_label=1,
+            relative_direction=[1, 0, 0],
+            acceleration=const_drive
+        )
+        
+        expected_output = '''joint: 1, angular acceleration,\n\t1, [1, 0, 0],\n\tconst, 5.0;\n'''
+        self.assertEqual(str(angular_accel), expected_output)
+
+    def test_custom_output(self):
+        """Test that the 'output' field is properly set when customized"""
+        const_drive = l.ConstDriveCaller(const_value=5.0)
+
+        # Create AngularAcceleration with custom output
+        angular_accel = l.AngularAcceleration(
+            idx=1,
+            node_label=1,
+            relative_direction=[1, 0, 0],
+            acceleration=const_drive,
+            output='no'
+        )
+        
+        expected_output = '''joint: 1, angular acceleration,\n\t1, [1, 0, 0],\n\tconst, 5.0,\n\toutput, no;\n'''
+        self.assertEqual(str(angular_accel), expected_output)
+
+class TestAngularVelocity(unittest.TestCase):
+
+    def test_valid_input(self):
+        """Test that AngularVelocity works with valid input"""
+        # Valid instance of ConstDriveCaller
+        const_drive = l.ConstDriveCaller(const_value=5.0)
+        
+        # Create an AngularVelocity instance with valid inputs
+        angular_vel = l.AngularVelocity(
+            idx=1,
+            node_label=1,
+            relative_direction=[1, 0, 0],
+            velocity=const_drive
+        )
+        
+        expected_output = '''joint: 1, angular velocity,\n\t1, [1, 0, 0],\n\tconst, 5.0;\n'''
+        self.assertEqual(str(angular_vel), expected_output)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_invalid_relative_direction_length(self):
+        """Test that AngularVelocity raises an error for invalid relative_direction length"""
+        const_drive = l.ConstDriveCaller(const_value=5.0)
+
+        # relative_direction must have exactly 3 elements, expect failure
+        with self.assertRaises(Exception):
+            l.AngularVelocity(
+                idx=1,
+                node_label=1,
+                relative_direction=[1, 0],  # Invalid length
+                velocity=const_drive
+            )
+
+    def test_invalid_relative_direction_magnitude(self):
+        """Test that AngularVelocity raises an error for non-unit vector relative_direction"""
+        const_drive = l.ConstDriveCaller(const_value=5.0)
+
+        # relative_direction must be a unit vector (magnitude = 1), expect failure
+        with self.assertRaises(ValueError):
+            l.AngularVelocity(
+                idx=1,
+                node_label=1,
+                relative_direction=[2, 0, 0],  # Invalid magnitude (not a unit vector)
+                velocity=const_drive
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_invalid_velocity_type(self):
+        """Test that AngularVelocity raises an error for invalid velocity type"""
+        # Pass an invalid type for velocity
+        with self.assertRaises(Exception):
+            l.AngularVelocity(
+                idx=1,
+                node_label=1,
+                relative_direction=[1, 0, 0],
+                velocity=5  # Invalid type, should be DriveCaller or its subclass
+            )
+
+    def test_optional_output(self):
+        """Test that the 'output' field is optional and defaults to 'yes'"""
+        const_drive = l.ConstDriveCaller(const_value=5.0)
+
+        # Create AngularVelocity without specifying output
+        angular_vel = l.AngularVelocity(
+            idx=1,
+            node_label=1,
+            relative_direction=[1, 0, 0],
+            velocity=const_drive
+        )
+        
+        expected_output = '''joint: 1, angular velocity,\n\t1, [1, 0, 0],\n\tconst, 5.0;\n'''
+        self.assertEqual(str(angular_vel), expected_output)
+
+    def test_custom_output(self):
+        """Test that the 'output' field is properly set when customized"""
+        const_drive = l.ConstDriveCaller(const_value=5.0)
+
+        # Create AngularVelocity with custom output
+        angular_vel = l.AngularVelocity(
+            idx=1,
+            node_label=1,
+            relative_direction=[1, 0, 0],
+            velocity=const_drive,
+            output='no'
+        )
+        
+        expected_output = '''joint: 1, angular velocity,\n\t1, [1, 0, 0],\n\tconst, 5.0,\n\toutput, no;\n'''
+        self.assertEqual(str(angular_vel), expected_output)
+
+class TestAxialRotation(unittest.TestCase):
+
+    def test_valid_input(self):
+        """Test that AxialRotation works with valid input"""
+        # Valid instances of Position2 and DriveCaller
+        position1 = l.Position2(reference='global', relative_position=[0, 0, 0])
+        orientation1 = l.Position2(reference='global', relative_position=[1, 0, 0])
+        position2 = l.Position2(reference='global', relative_position=[1, 1, 1])
+        orientation2 = l.Position2(reference='global', relative_position=[0, 1, 0])
+        drive_caller = l.ConstDriveCaller(const_value=5.0)
+        
+        # Create an AxialRotation instance with valid inputs
+        axial_rot = l.AxialRotation(
+            idx=1,
+            node_1_label=1,
+            position_1=position1,
+            orientation_mat_1=orientation1,
+            node_2_label=2,
+            position_2=position2,
+            orientation_mat_2=orientation2,
+            angular_velocity=drive_caller
+        )
+        
+        expected_output = (
+            f"{axial_rot.element_header()}, axial rotation,\n"
+            f"\t{axial_rot.node_1_label},\n"
+            f"\t\tposition, {axial_rot.position_1},\n"
+            f"\t\torientation, {axial_rot.orientation_mat_1},\n"
+            f"\t{axial_rot.node_2_label},\n"
+            f"\t\tposition, {axial_rot.position_2},\n"
+            f"\t\torientation, {axial_rot.orientation_mat_2},\n"
+            f"\t{axial_rot.angular_velocity}"
+            f"{axial_rot.element_footer()}"
+        )
+        self.maxDiff=None
+        self.assertEqual(str(axial_rot), expected_output)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_invalid_position_type(self):
+        """Test that AxialRotation raises an error for invalid position type"""
+        # Valid instances of Position2 and DriveCaller
+        orientation1 = l.Position2(reference='global', relative_position=[1, 0, 0])
+        position2 = l.Position2(reference='global', relative_position=[1, 1, 1])
+        orientation2 = l.Position2(reference='global', relative_position=[0, 1, 0])
+        drive_caller = l.ConstDriveCaller(const_value=5.0)
+
+        # position_1 must be of type Position2
+        with self.assertRaises(Exception):
+            l.AxialRotation(
+                idx=1,
+                node_1_label=1,
+                position_1='invalid_position',  # Invalid type
+                orientation_mat_1=orientation1,
+                node_2_label=2,
+                position_2=position2,
+                orientation_mat_2=orientation2,
+                angular_velocity=drive_caller
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_invalid_orientation_type(self):
+        """Test that AxialRotation raises an error for invalid orientation type"""
+        # Valid instances of Position2 and DriveCaller
+        position1 = l.Position2(reference='global', relative_position=[0, 0, 0])
+        position2 = l.Position2(reference='global', relative_position=[1, 1, 1])
+        drive_caller = l.ConstDriveCaller(const_value=5.0)
+
+        # orientation_mat_1 must be of type Position2
+        with self.assertRaises(Exception):
+            l.AxialRotation(
+                idx=1,
+                node_1_label=1,
+                position_1=position1,
+                orientation_mat_1='invalid_orientation',  # Invalid type
+                node_2_label=2,
+                position_2=position2,
+                orientation_mat_2=l.Position2(reference='global', relative_position=[0, 1, 0]),
+                angular_velocity=drive_caller
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_invalid_angular_velocity_type(self):
+        """Test that AxialRotation raises an error for invalid angular_velocity type"""
+        # Valid instances of Position2
+        position1 = l.Position2(reference='global', relative_position=[0, 0, 0])
+        orientation1 = l.Position2(reference='global', relative_position=[1, 0, 0])
+        position2 = l.Position2(reference='global', relative_position=[1, 1, 1])
+        orientation2 = l.Position2(reference='global', relative_position=[0, 1, 0])
+
+        # angular_velocity must be of type DriveCaller or DriveCaller2
+        with self.assertRaises(Exception):
+            l.AxialRotation(
+                idx=1,
+                node_1_label=1,
+                position_1=position1,
+                orientation_mat_1=orientation1,
+                node_2_label=2,
+                position_2=position2,
+                orientation_mat_2=orientation2,
+                angular_velocity='invalid_velocity'  # Invalid type
+            )
+
+    def test_optional_output(self):
+        """Test that the 'output' field is optional and defaults to 'yes'"""
+        # Valid instances of Position2 and DriveCaller
+        position1 = l.Position2(reference='global', relative_position=[0, 0, 0])
+        orientation1 = l.Position2(reference='global', relative_position=[1, 0, 0])
+        position2 = l.Position2(reference='global', relative_position=[1, 1, 1])
+        orientation2 = l.Position2(reference='global', relative_position=[0, 1, 0])
+        drive_caller = l.ConstDriveCaller(const_value=5.0)
+
+        # Create AxialRotation without specifying output
+        axial_rot = l.AxialRotation(
+            idx=1,
+            node_1_label=1,
+            position_1=position1,
+            orientation_mat_1=orientation1,
+            node_2_label=2,
+            position_2=position2,
+            orientation_mat_2=orientation2,
+            angular_velocity=drive_caller
+        )
+        expected_output = (
+            f"{axial_rot.element_header()}, axial rotation,\n"
+            f"\t{axial_rot.node_1_label},\n"
+            f"\t\tposition, {axial_rot.position_1},\n"
+            f"\t\torientation, {axial_rot.orientation_mat_1},\n"
+            f"\t{axial_rot.node_2_label},\n"
+            f"\t\tposition, {axial_rot.position_2},\n"
+            f"\t\torientation, {axial_rot.orientation_mat_2},\n"
+            f"\t{axial_rot.angular_velocity}"
+            f"{axial_rot.element_footer()}"
+        )  
+        self.maxDiff=None      
+        self.assertEqual(str(axial_rot), expected_output)
+
+    def test_custom_output(self):
+        """Test that the 'output' field is properly set when customized"""
+        # Valid instances of Position2 and DriveCaller
+        position1 = l.Position2(reference='global', relative_position=[0, 0, 0])
+        orientation1 = l.Position2(reference='global', relative_position=[1, 0, 0])
+        position2 = l.Position2(reference='global', relative_position=[1, 1, 1])
+        orientation2 = l.Position2(reference='global', relative_position=[0, 1, 0])
+        drive_caller = l.ConstDriveCaller(const_value=5.0)
+
+        # Create AxialRotation with custom output
+        axial_rot = l.AxialRotation(
+            idx=1,
+            node_1_label=1,
+            position_1=position1,
+            orientation_mat_1=orientation1,
+            node_2_label=2,
+            position_2=position2,
+            orientation_mat_2=orientation2,
+            angular_velocity=drive_caller,
+            output='no'
+        )
+        
+        expected_output = (
+            f"{axial_rot.element_header()}, axial rotation,\n"
+            f"\t{axial_rot.node_1_label},\n"
+            f"\t\tposition, {axial_rot.position_1},\n"
+            f"\t\torientation, {axial_rot.orientation_mat_1},\n"
+            f"\t{axial_rot.node_2_label},\n"
+            f"\t\tposition, {axial_rot.position_2},\n"
+            f"\t\torientation, {axial_rot.orientation_mat_2},\n"
+            f"\t{axial_rot.angular_velocity}"
+            f"{axial_rot.element_footer()}"
+        )  
+        self.maxDiff=None
+        self.assertEqual(str(axial_rot), expected_output)
+
+class TestBeamSlider(unittest.TestCase):
+    def setUp(self):
+        # Define Position2 instances
+        self.position1 = l.Position2(
+            relative_position=[[0.0, 0.0, 0.0]], 
+            reference='global'
+        )
+        self.position2 = l.Position2(
+            relative_position=[[1.0, 0.0, 0.0]], 
+            reference='node'
+        )
+        self.position3 = l.Position2(
+            relative_position=[[0.0, 1.0, 0.0]], 
+            reference='other node'
+        )
+
+        # Define Constitutive Laws
+        self.elastic_law = l.LinearElastic(
+            law_type=l.ConstitutiveLaw.LawType.D3_ISOTROPIC_LAW,
+            stiffness=2000.0
+        )
+
+        # Define Beams
+        self.beam = l.Beam(
+            idx=1,
+            nodes=[1, 2, 3],
+            positions=[self.position1, self.position2, self.position3],
+            orientations=[self.position1, self.position2, self.position3],
+            const_laws_orientations=[self.position1, self.position2],
+            const_laws=[self.elastic_law, self.elastic_law],
+        )
+    
+    def test_valid_input(self):
+        beam_slider = l.BeamSlider(
+            idx=1,
+            slider_node_label=1,
+            position=self.position1,
+            orientation=self.position2,
+            slider_type='classic',
+            beam_number=1,
+            three_node_beam=self.beam,
+            first_node_offset=self.position1,
+            first_node_orientation=self.position2,
+            mid_node_offset=self.position2,
+            mid_node_orientation=self.position3,
+            end_node_offset=self.position3,
+            end_node_orientation=self.position1,
+            initial_beam=self.beam,
+            initial_node=None,
+            smearing_factor=0.5
+        )
+        expected_str = (
+            f"joint: {beam_slider.idx}, kinematic,\n"
+            f"\t{beam_slider.slider_node_label},\n"
+            f"\t\t{beam_slider.position},\n"
+            f"\t\thinge, {beam_slider.orientation},\n"
+            f"\ttype, {beam_slider.slider_type},\n"
+            f"\t{beam_slider.beam_number},\n"
+            f"\t\t{beam_slider.three_node_beam}"[:-2] + ",\n"  # Remove ';\n' and add ',\n'
+            f"\t\t\t{beam_slider.first_node_offset},\n"
+            f"\t\thinge, {beam_slider.first_node_orientation},\n"
+            f"\t\t\t{beam_slider.mid_node_offset},\n"
+            f"\t\thinge, {beam_slider.mid_node_orientation},\n"
+            f"\t\t\t{beam_slider.end_node_offset},\n"
+            f"\t\thinge, {beam_slider.end_node_orientation},\n"
+            f"\tinitial beam, {beam_slider.initial_beam}"[:-2] + ",\n"  # Remove ';\n' and add ',\n'
+            f"\tsmearing, {beam_slider.smearing_factor};\n"
+        )
+        self.maxDiff=None
+        self.assertEqual(str(beam_slider), expected_str)
+    
+    def test_invalid_slider_type(self):
+        with self.assertRaises(ValueError):
+            l.BeamSlider(
+                idx=1,
+                slider_node_label=1,
+                position=self.position1,
+                orientation=self.position2,
+                slider_type='invalid_type',
+                beam_number=1,
+                three_node_beam=self.beam,
+                first_node_offset=self.position1,
+                first_node_orientation=self.position2,
+                mid_node_offset=self.position2,
+                mid_node_orientation=self.position3,
+                end_node_offset=self.position3,
+                end_node_orientation=self.position1,
+                initial_beam=self.beam,
+                initial_node=None,
+                smearing_factor=0.5
+            )
+    
+    def test_optional_fields(self):
+        beam_slider = l.BeamSlider(
+            idx=1,
+            slider_node_label=1,
+            position=self.position1,
+            orientation=None,
+            slider_type=None,
+            beam_number=1,
+            three_node_beam=self.beam,
+            first_node_offset=self.position1,
+            first_node_orientation=None,
+            mid_node_offset=self.position2,
+            mid_node_orientation=None,
+            end_node_offset=self.position3,
+            end_node_orientation=None,
+            initial_beam=None,
+            initial_node=None,
+            smearing_factor=None
+        )
+        expected_str = (
+            f"{beam_slider.element_header()}, kinematic,\n"
+            f"\t{beam_slider.slider_node_label},\n"
+            f"\t\t{beam_slider.position},\n"
+            f"\t{beam_slider.beam_number},\n"
+            f"\t\t{beam_slider.three_node_beam}"[:-2] + ",\n"  # Remove ';\n' and add ',\n'
+            f"\t\t\t{beam_slider.first_node_offset},\n"
+            f"\t\t\t{beam_slider.mid_node_offset},\n"
+            f"\t\t\t{beam_slider.end_node_offset}"
+            f"{beam_slider.element_footer()}"
+        )
+        self.maxDiff = None
+        self.assertEqual(str(beam_slider), expected_str)
+
+    def test_invalid_mid_node_offset_type(self):
+        with self.assertRaises(ValueError):
+            l.BeamSlider(
+                idx=1,
+                slider_node_label=1,
+                position=self.position1,
+                orientation=self.position2,
+                slider_type='classic',
+                beam_number=1,
+                three_node_beam=self.beam,
+                first_node_offset=self.position1,
+                first_node_orientation=self.position2,
+                mid_node_offset='invalid_offset',
+                mid_node_orientation=self.position3,
+                end_node_offset=self.position3,
+                end_node_orientation=self.position1,
+                initial_beam=self.beam,
+                initial_node=None,
+                smearing_factor=0.5
+            )
+
+    def test_invalid_end_node_offset_type(self):
+        with self.assertRaises(ValueError):
+            l.BeamSlider(
+                idx=1,
+                slider_node_label=1,
+                position=self.position1,
+                orientation=self.position2,
+                slider_type='classic',
+                beam_number=1,
+                three_node_beam=self.beam,
+                first_node_offset=self.position1,
+                first_node_orientation=self.position2,
+                mid_node_offset=self.position2,
+                mid_node_orientation=self.position3,
+                end_node_offset='invalid_offset',
+                end_node_orientation=self.position1,
+                initial_beam=self.beam,
+                initial_node=None,
+                smearing_factor=0.5
+            )
+
+    def test_invalid_initial_node_type(self):
+        with self.assertRaises(ValueError):
+            l.BeamSlider(
+                idx=1,
+                slider_node_label=1,
+                position=self.position1,
+                orientation=self.position2,
+                slider_type='classic',
+                beam_number=1,
+                three_node_beam=self.beam,
+                first_node_offset=self.position1,
+                first_node_orientation=self.position2,
+                mid_node_offset=self.position2,
+                mid_node_orientation=self.position3,
+                end_node_offset=self.position3,
+                end_node_orientation=self.position1,
+                initial_beam=self.beam,
+                initial_node='invalid_node',
+                smearing_factor=0.5
+            )
+
+class TestBrake(unittest.TestCase):
+    def setUp(self):
+        self.position1 = l.Position2(relative_position=[[0.0, 0.0, 0.0]], reference='global')
+        self.position2 = l.Position2(relative_position=[[1.0, 0.0, 0.0]], reference='node')
+        self.normal_force = l.ConstDriveCaller(const_value=1000.0)
+
+    def test_valid_brake(self):
+        brake = l.Brake(
+            idx=1,
+            node_1_label=1,
+            position_1=self.position1,
+            node_2_label=2,
+            position_2=self.position2,
+            average_radius=0.5,
+            friction_model="modlugre",
+            shape_function="tanh",
+            normal_force=self.normal_force
+        )
+        self.assertIsInstance(brake, l.Brake)
+
+    def test_str_representation(self):
+        brake = l.Brake(
+            idx=1,
+            node_1_label=1,
+            position_1=self.position1,
+            node_2_label=2,
+            position_2=self.position2,
+            average_radius=0.5,
+            friction_model="modlugre",
+            shape_function="tanh",
+            normal_force=self.normal_force
+        )
+        expected_str = (
+            "joint: 1, brake,\n"
+            "\t1, reference, global, [0.0, 0.0, 0.0],\n"
+            "\t2, reference, node, [1.0, 0.0, 0.0],\n"
+            "\tfriction, 0.5,\n"
+            "\t\tmodlugre,\n"
+            "\t\ttanh,\n"
+            "\tconst, 1000.0;\n"
+        )
+        self.assertEqual(str(brake), expected_str)
+
+    def test_with_optional_fields(self):
+        brake = l.Brake(
+            idx=1,
+            node_1_label=1,
+            position_1=self.position1,
+            orientation_mat_1=self.position2,
+            node_2_label=2,
+            position_2=self.position2,
+            orientation_mat_2=self.position1,
+            average_radius=0.5,
+            preload=100,
+            friction_model="modlugre",
+            shape_function="tanh",
+            normal_force=self.normal_force
+        )
+        self.assertIsInstance(brake, l.Brake)
+        self.assertEqual(brake.preload, 100)
+
 class TestCardanoPin(unittest.TestCase):
 
     def test_abstract_class(self):
