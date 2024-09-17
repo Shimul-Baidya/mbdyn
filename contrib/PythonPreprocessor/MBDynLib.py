@@ -1254,9 +1254,9 @@ class GimbalRotation(Element2):
     '''
 
     node_1_label: Union[int, MBVar]
-    relative_orientation_mat_1: Optional[Position2] = None
+    relative_orientation_mat_1: Optional[Union[Position2, List]] = None
     node_2_label: Union[int, MBVar]
-    relative_orientation_mat_2: Optional[Position2] = None
+    relative_orientation_mat_2: Optional[Union[Position2, List]] = None
     orientation_description: Optional[str] = Field(
         None,
         description="The type of orientation description",
@@ -1522,6 +1522,327 @@ class PlaneDisplacementPin(Element2):
         s += self.element_footer()
         return s
 
+class Prismatic(Element2):
+    '''
+    This joints constrains the relative orientation of two nodes, so that their orientations remain parallel.
+    The relative position is not constrained. The initial orientation of the joint must be compatible: use the
+    orientation keyword to assign the joint initial orientation.
+    '''
+
+    node_1_label: Union[int, MBVar]
+    relative_orientation_mat_1: Optional[Union[Position2, List]] = None
+    node_2_label: Union[int, MBVar]
+    relative_orientation_mat_2: Optional[Union[Position2, List]] = None
+
+    def element_type(self):
+        return 'joint'
+    
+    def __str__(self):
+        s = f'{self.element_header()}, prismatic'
+        s += f''',\n\t{self.node_1_label}'''
+        if self.relative_orientation_mat_1 is not None:
+            s += f''', orientation, {self.relative_orientation_mat_1}'''
+        s += f''',\n\t{self.node_2_label}'''
+        if self.relative_orientation_mat_2 is not None:
+            s += f''', orientation, {self.relative_orientation_mat_2}'''
+        s += self.element_footer()
+        return s
+
+class RevoluteHinge(Element2):
+    '''
+    This joint only allows the relative rotation of two nodes about a given axis, which is axis 3 in the reference
+    systems defined by the two orientation statements.
+    '''
+
+    node_1_label: Union[int, MBVar]
+    position_1: Position2
+    orientation_mat_1: Optional[Position2] = None
+    node_2_label: Union[int, MBVar]
+    position_2: Position2
+    orientation_mat_2: Optional[Position2] = None
+    initial_theta: Optional[Union[float, MBVar]] = None
+    friction: Optional[Union[float, MBVar]] = None
+    preload: Optional[Union[float, MBVar]] = None
+    friction_model: Optional[str] # TODO: Define FrictionModel
+    shape_function: Optional[str] # TODO: Define ShapeFunctions
+
+    def element_type(self):
+        return 'joint'
+    
+    @model_validator(mode='after')
+    def check_friction_parameters(self):
+        if self.friction is not None:
+            if self.friction_model is None or self.shape_function is None:
+                raise ValueError("When 'friction' is specified, 'friction_model' and 'shape_function' must also be specified.")
+            # 'preload' is optional when 'friction' is specified
+        else:
+            # If 'friction' is not specified, none of the friction-related parameters should be specified
+            if any(param is not None for param in [self.preload, self.friction_model, self.shape_function]):
+                raise ValueError("If 'friction' is not specified, 'preload', 'friction_model', and 'shape_function' should not be specified.")
+        return self
+
+    def __str__(self):
+        s = f'{self.element_header()}, revolute hinge'
+        s += f',\n\t{self.node_1_label}'
+        s += f',\n\t\tposition, {self.position_1}'
+        if self.orientation_mat_1 is not None:
+            s += f',\n\t\torientation, {self.orientation_mat_1}'
+        s += f',\n\t{self.node_2_label}'
+        s += f',\n\t\tposition, {self.position_2}'
+        if self.orientation_mat_2 is not None:
+            s += f',\n\t\torientation, {self.orientation_mat_2}'
+        if self.initial_theta is not None:
+            s += f',\n\tinitial theta, {self.initial_theta}'
+        if self.friction is not None:
+            s += f',\n\tfriction, {self.friction}'
+            if self.preload is not None:
+                s += f',\n\t\tpreload, {self.preload}'
+            s += f',\n\t\t{self.friction_model}'
+            s += f',\n\t\t{self.shape_function}'
+        s += self.element_footer()
+        return s
+
+class RevolutePin(Element2):
+    '''
+    This joint only allows the absolute rotation of a node about a given axis, which is axis 3 in the reference
+    systems defined by the two orientation statements.
+    '''
+
+    node_label: Union[int, MBVar]
+    relative_offset: Position2
+    relative_orientation_mat: Optional[Union[Position2, list]] = None
+    absolute_pin_position: Position2
+    absolute_pin_orientation_mat: Optional[Union[Position2, list]] = None
+    initial_theta: Optional[Union[float, MBVar]] = None
+
+    def element_type(self):
+        return 'joint'
+
+    def __str__(self):
+        s = f'{self.element_header()}, revolute pin'
+        s += f',\n\t{self.node_label}'
+        s += f',\n\t\tposition, {self.relative_offset}'
+        if self.relative_orientation_mat is not None:
+            s += f',\n\t\torientation, {self.relative_orientation_mat}'
+        s += f',\n\tposition, {self.absolute_pin_position}'
+        if self.absolute_pin_orientation_mat is not None:
+            s += f',\n\torientation, {self.absolute_pin_orientation_mat}'
+        if self.initial_theta is not None:
+            s += f',\n\tinitial theta, {self.initial_theta}'
+        s += self.element_footer()
+        return s
+
+class RevoluteRotation(Element2):
+    '''
+    This joint allows the relative rotation of two nodes about a given axis, which is axis 3 in the reference
+    systems defined by the two orientation statements. The relative position is not constrained.
+    '''
+
+    node_1_label: Union[int, MBVar]
+    position_1: Optional[Position2] = None
+    orientation_mat_1: Optional[Union[Position2, list]] = None
+    node_2_label: Union[int, MBVar]
+    position_2: Optional[Position2] = None
+    orientation_mat_2: Optional[Union[Position2, list]] = None
+
+    def element_type(self):
+        return 'joint'
+
+    def __str__(self):
+        s = f'{self.element_header()}, revolute rotation'
+        s += f',\n\t{self.node_1_label}'
+        if self.position_1 is not None:
+            s += f',\n\t\tposition, {self.position_1}'
+        if self.orientation_mat_1 is not None:
+            s += f',\n\t\torientation, {self.orientation_mat_1}'
+        s += f',\n\t{self.node_2_label}'
+        if self.position_2 is not None:
+            s += f',\n\t\tposition, {self.position_2}'
+        if self.orientation_mat_2 is not None:
+            s += f',\n\t\torientation, {self.orientation_mat_2}'
+        s += self.element_footer()
+        return s
+
+class Rod2(Element2):
+    '''
+    The rod element represents a force between two nodes that depends on the relative position and velocity
+    of two points, each rigidly attached to a structural node. The direction of the force is also based on
+    the relative position of the points: it is the line that passes through them. If no offset is defined, the
+    points are the nodes themselves.
+    '''
+
+    node_1_label: Union[int, MBVar]
+    position_1: Optional[Position2] = None
+    node_2_label: Union[int, MBVar]
+    position_2: Optional[Position2] = None
+    rod_length: Union[float, MBVar, str]  # Can be a float or 'from nodes'
+    const_law: 'ConstitutiveLaw'
+
+    def element_type(self):
+        return 'joint'
+    
+    @field_validator('rod_length')
+    def validate_rod_length(cls, v):
+        if isinstance(v, str):
+            if v.lower() != 'from nodes':
+                raise ValueError("rod_length must be a float, MBVar or the string 'from nodes'")
+            return v.lower()
+        
+    @field_validator('const_law')
+    def validate_const_law(cls, v):
+        if not isinstance(v, ConstitutiveLaw):
+            raise TypeError("const_law must be an instance of ConstitutiveLaw")
+        if v.law_type != ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW:
+            raise ValueError("const_law must be a 1D constitutive law with law_type 'SCALAR_ISOTROPIC_LAW'")
+        return v
+
+    def __str__(self):
+        s = f'{self.element_header()}, rod'
+        s += f',\n\t{self.node_1_label}'
+        if self.position_1 is not None:
+            s += f',\n\t\tposition, {self.position_1}'
+        s += f',\n\t{self.node_2_label}'
+        if self.position_2 is not None:
+            s += f',\n\t\tposition, {self.position_2}'
+        if isinstance(self.rod_length, str) and self.rod_length.lower() == 'from nodes':
+            s += f',\n\tfrom nodes'
+        else:
+            s += f',\n\t{self.rod_length}'
+        s += f',\n\t{self.const_law}'
+        s += self.element_footer()
+        return s
+    
+from typing import Union
+from pydantic import field_validator
+
+class RodWithOffset(Element2):
+    '''
+    Analogous to the rod joint with the optional offsets.
+    '''
+
+    node_1_label: Union[int, MBVar]
+    position_1: Position2  # Required
+    node_2_label: Union[int, MBVar]
+    position_2: Position2  # Required
+    rod_length: Union[float, MBVar, str]  # Can be a float, MBVar or 'from nodes'
+    const_law: 'ConstitutiveLaw'  # Should be a 1D constitutive law
+
+    def element_type(self):
+        return 'joint'
+
+    @field_validator('rod_length')
+    def validate_rod_length(cls, v):
+        if isinstance(v, str):
+            if v.lower() != 'from nodes':
+                raise ValueError("rod_length must be a float or the string 'from nodes'")
+            return v.lower()
+
+    @field_validator('const_law')
+    def validate_const_law(cls, v):
+        if not isinstance(v, ConstitutiveLaw):
+            raise TypeError("const_law must be an instance of ConstitutiveLaw")
+        if v.law_type != ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW:
+            raise ValueError("const_law must be a 1D constitutive law with law_type 'SCALAR_ISOTROPIC_LAW'")
+        return v
+
+    def __str__(self):
+        s = f'{self.element_header()}, rod with offset'
+        s += f',\n\t{self.node_1_label}'
+        s += f',\n\t\t{self.position_1}'
+        s += f',\n\t{self.node_2_label}'
+        s += f',\n\t\t{self.position_2}'
+        if isinstance(self.rod_length, str) and self.rod_length == 'from nodes':
+            s += f',\n\tfrom nodes'
+        else:
+            s += f',\n\t{self.rod_length}'
+        s += f',\n\t{self.const_law}'
+        s += self.element_footer()
+        return s
+
+class RodBezier(Element2):
+    '''
+    This joint, in analogy with the rod joint, represents a force that acts between two points each rigidly
+    attached to a structural node.
+
+    The force on node 1 acts along the line connecting the insertion point, defined in the reference frame of
+    the node by <relative_offset_1> and a first intermediate point defined, also in the reference frame of
+    the node, by <relative_offset_2>. In the same way, the force on node 2 is applied at the insertion
+    point of the element, defined in the reference frame of node 2 by <relative_offset_4> and acts along
+    the line connecting a second intermediate point defined by <relative_offset_3>.
+
+    The element internally is represented as a Bézier spline of order 3, which length and instantaneous
+    lengthening velocity are calculated using Gauss-Legendre quadrature.
+
+    The absolute value of the force depends on the strain and strain rate of the curve as in the standard rod
+    element as determined by the ConstitutiveLaw<1D> <const_law>.
+    '''
+
+    node_1_label: Union[int, MBVar]
+    position_1: Position2
+    position_2: Position2
+    node_2_label: Union[int, MBVar]
+    position_3: Position2
+    position_4: Position2
+    rod_length: Union[float, MBVar, str]  # Can be a float or 'from nodes'
+    const_law: 'ConstitutiveLaw'  # Should be a 1D constitutive law
+    integration_order: int = 2  # Defaults to 2
+    integration_segments: int = 3  # Defaults to 3
+
+    def element_type(self):
+        return 'joint'
+
+    @field_validator('rod_length')
+    def validate_rod_length(cls, v):
+        if isinstance(v, str):
+            if v.lower() != 'from nodes':
+                raise ValueError("rod_length must be a float or the string 'from nodes'")
+            return v.lower()
+
+    @field_validator('const_law')
+    def validate_const_law(cls, v):
+        if not isinstance(v, ConstitutiveLaw):
+            raise TypeError("const_law must be an instance of ConstitutiveLaw")
+        if v.law_type != ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW:
+            raise ValueError("const_law must be a 1D constitutive law with law_type 'SCALAR_ISOTROPIC_LAW'")
+        return v
+
+    @field_validator('integration_order')
+    def validate_integration_order(cls, v):
+        if not isinstance(v, int):
+            raise TypeError("integration_order must be an integer")
+        if not (1 <= v <= 10):
+            raise ValueError("integration_order must be between 1 and 10")
+        return v
+
+    @field_validator('integration_segments')
+    def validate_integration_segments(cls, v):
+        if not isinstance(v, int):
+            raise TypeError("integration_segments must be an integer")
+        if v <= 0:
+            raise ValueError("integration_segments must be a positive integer")
+        return v
+
+    def __str__(self):
+        s = f'{self.element_header()}, rod bezier'
+        s += f',\n\t{self.node_1_label}'
+        s += f',\n\t\t{self.position_1}'
+        s += f',\n\t\t{self.position_2}'
+        s += f',\n\t{self.node_2_label}'
+        s += f',\n\t\t{self.position_3}'
+        s += f',\n\t\t{self.position_4}'
+        if isinstance(self.rod_length, str) and self.rod_length == 'from nodes':
+            s += f',\n\tfrom nodes'
+        else:
+            s += f',\n\t{self.rod_length}'
+        # Include integration order only if it differs from the default value of 2
+        if self.integration_order != 2:
+            s += f',\n\tintegration order, {self.integration_order}'
+        # Include integration segments only if it differs from the default value of 3
+        if self.integration_segments != 3:
+            s += f',\n\tintegration segments, {self.integration_segments}'
+        s += f',\n\t{self.const_law}'
+        s += self.element_footer()
+        return s
     
 class Body(Element):
     def __init__(self, idx, node, mass, position, inertial_matrix, inertial = null,
@@ -1559,7 +1880,6 @@ class Body(Element):
             s = s + ',\n\toutput, ' + str(self.output)
         s = s + ';\n'
         return s
-
 
 class StructuralForce(Element):
     def __init__(self, idx, node, ftype, position, force_drive, 
@@ -5573,7 +5893,9 @@ class NamedConstitutiveLaw:
 
 DeformableAxial.model_rebuild()
 DeformableHinge2.model_rebuild()
-
+Rod2.model_rebuild()
+RodWithOffset.model_rebuild()
+RodBezier.model_rebuild()
 
 class FileDriver(MBEntity):
     """
