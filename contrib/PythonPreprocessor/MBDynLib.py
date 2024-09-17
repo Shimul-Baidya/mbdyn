@@ -2398,7 +2398,7 @@ class DriveCaller2(MBEntity):
     def drive_header(self) -> str:
         """common syntax for start of any drive caller"""
         # it's not just `__str__` to still require overriding it in specific drives
-        if self.idx is not None and self.idx > 0:
+        if self.idx is not None and self.idx >= 0:
             # The idx possibly being None communicates the intent more clearly than checking if it's >=0
             return f'drive caller: {self.idx}, {self.drive_type()}'
         else:
@@ -4520,7 +4520,7 @@ class ConstitutiveLaw(MBEntity):
         
     def const_law_header(self) -> str:
         """Common syntax for start of any constitutive law"""
-        if self.idx is not None:
+        if self.idx is not None and self.idx >= 0:
             return f'constitutive law: {self.idx}, name, "{self.law_type.value}",' \
                    f'\n\t{self.dim}, {self.const_law_name()}'
         else:
