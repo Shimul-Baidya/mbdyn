@@ -365,7 +365,7 @@ class TestAngularAcceleration(unittest.TestCase):
             acceleration=const_drive
         )
         
-        expected_output = '''joint: 1, angular acceleration,\n\t1, [1, 0, 0],\n\tconst, 5.0;\n'''
+        expected_output = '''joint: 1, angular acceleration,\n\t1, [1.0, 0.0, 0.0],\n\tconst, 5.0;\n'''
         self.assertEqual(str(angular_accel), expected_output)
 
     @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
@@ -419,7 +419,7 @@ class TestAngularAcceleration(unittest.TestCase):
             acceleration=const_drive
         )
         
-        expected_output = '''joint: 1, angular acceleration,\n\t1, [1, 0, 0],\n\tconst, 5.0;\n'''
+        expected_output = '''joint: 1, angular acceleration,\n\t1, [1.0, 0.0, 0.0],\n\tconst, 5.0;\n'''
         self.assertEqual(str(angular_accel), expected_output)
 
     def test_custom_output(self):
@@ -435,7 +435,7 @@ class TestAngularAcceleration(unittest.TestCase):
             output='no'
         )
         
-        expected_output = '''joint: 1, angular acceleration,\n\t1, [1, 0, 0],\n\tconst, 5.0,\n\toutput, no;\n'''
+        expected_output = '''joint: 1, angular acceleration,\n\t1, [1.0, 0.0, 0.0],\n\tconst, 5.0,\n\toutput, no;\n'''
         self.assertEqual(str(angular_accel), expected_output)
 
 class TestAngularVelocity(unittest.TestCase):
@@ -453,7 +453,7 @@ class TestAngularVelocity(unittest.TestCase):
             velocity=const_drive
         )
         
-        expected_output = '''joint: 1, angular velocity,\n\t1, [1, 0, 0],\n\tconst, 5.0;\n'''
+        expected_output = '''joint: 1, angular velocity,\n\t1, [1.0, 0.0, 0.0],\n\tconst, 5.0;\n'''
         self.assertEqual(str(angular_vel), expected_output)
 
     @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
@@ -507,7 +507,7 @@ class TestAngularVelocity(unittest.TestCase):
             velocity=const_drive
         )
         
-        expected_output = '''joint: 1, angular velocity,\n\t1, [1, 0, 0],\n\tconst, 5.0;\n'''
+        expected_output = '''joint: 1, angular velocity,\n\t1, [1.0, 0.0, 0.0],\n\tconst, 5.0;\n'''
         self.assertEqual(str(angular_vel), expected_output)
 
     def test_custom_output(self):
@@ -523,7 +523,7 @@ class TestAngularVelocity(unittest.TestCase):
             output='no'
         )
         
-        expected_output = '''joint: 1, angular velocity,\n\t1, [1, 0, 0],\n\tconst, 5.0,\n\toutput, no;\n'''
+        expected_output = '''joint: 1, angular velocity,\n\t1, [1.0, 0.0, 0.0],\n\tconst, 5.0,\n\toutput, no;\n'''
         self.assertEqual(str(angular_vel), expected_output)
 
 class TestAxialRotation(unittest.TestCase):
@@ -1818,7 +1818,7 @@ class TestImposedDisplacement(unittest.TestCase):
             idx=10
         )
         expected_str = (
-            f'{imposed_displacement.element_header()}, drive displacement'
+            f'{imposed_displacement.element_header()}, imposed displacement'
             f',\n\t{self.node_1_label}, {self.position_1}'
             f',\n\t{self.node_2_label}, {self.position_2}'
             f',\n\t{self.direction}'
@@ -1871,6 +1871,999 @@ class TestImposedDisplacement(unittest.TestCase):
     #         relative_position=self.relative_position_drive
     #     )
     #     self.assertEqual(imposed_displacement.direction, direction)
+
+class TestImposedDisplacementPin(unittest.TestCase):
+    def setUp(self):
+        # Common variables used in tests
+        self.node_label = 1
+        self.node_offset = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='global')
+        self.offset = l.Position2(relative_position=[1.0, 1.0, 1.0], reference='global')
+        self.direction = [1.0, 0.0, 0.0]
+        self.position_drive = l.ConstDriveCaller(const_value=5.0)
+        self.position_drive_with_idx = l.ConstDriveCaller(const_value=5.0, idx=10)
+
+    def test_imposed_displacement_pin_creation_valid(self):
+        # Test creating an ImposedDisplacementPin instance with valid data
+        imposed_displacement_pin = l.ImposedDisplacementPin(
+            node_label=self.node_label,
+            node_offset=self.node_offset,
+            offset=self.offset,
+            direction=self.direction,
+            position=self.position_drive,
+            idx=20,
+            output='yes'
+        )
+        self.assertIsInstance(imposed_displacement_pin, l.ImposedDisplacementPin)
+        self.assertEqual(imposed_displacement_pin.node_label, self.node_label)
+        self.assertEqual(imposed_displacement_pin.direction, self.direction)
+        self.assertEqual(str(imposed_displacement_pin.position), 'const, 5.0')
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_imposed_displacement_pin_missing_required_field(self):
+        # Test creating an ImposedDisplacementPin instance missing a required field (direction)
+        with self.assertRaises(Exception):
+            l.ImposedDisplacementPin(
+                idx=20,
+                node_label=self.node_label,
+                node_offset=self.node_offset,
+                offset=self.offset,
+                position=self.position_drive
+                # Missing direction
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_imposed_displacement_pin_invalid_direction(self):
+        # Test passing an invalid type for direction
+        with self.assertRaises(Exception):
+            l.ImposedDisplacementPin(
+                node_label=self.node_label,
+                node_offset=self.node_offset,
+                offset=self.offset,
+                direction=[1.0, 0.0],  # Invalid length, should be 3 elements
+                position=self.position_drive
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_imposed_displacement_pin_invalid_position(self):
+        # Test passing an invalid type for position
+        with self.assertRaises(Exception):
+            l.ImposedDisplacementPin(
+                idx=20,
+                node_label=self.node_label,
+                node_offset=self.node_offset,
+                offset=self.offset,
+                direction=self.direction,
+                position=123  # Invalid type, should be DriveCaller
+            )
+
+    def test_imposed_displacement_pin_str_method(self):
+        # Test the __str__ method of ImposedDisplacementPin without position idx
+        imposed_displacement_pin = l.ImposedDisplacementPin(
+            node_label=self.node_label,
+            node_offset=self.node_offset,
+            offset=self.offset,
+            direction=self.direction,
+            position=self.position_drive,
+            idx=20
+        )
+        expected_str = (
+            f'{imposed_displacement_pin.element_header()}, imposed displacement pin'
+            f',\n\t{self.node_label}, {self.node_offset}'
+            f',\n\t{self.offset}'
+            f',\n\t{self.direction}'
+            f',\n\t{self.position_drive}'
+            f'{imposed_displacement_pin.element_footer()}'
+        )
+        self.assertEqual(str(imposed_displacement_pin), expected_str)
+
+    def test_imposed_displacement_pin_str_method_with_position_idx(self):
+        # Test the __str__ method of ImposedDisplacementPin with position idx
+        imposed_displacement_pin = l.ImposedDisplacementPin(
+            node_label=self.node_label,
+            node_offset=self.node_offset,
+            offset=self.offset,
+            direction=self.direction,
+            position=self.position_drive_with_idx,
+            idx=20
+        )
+        expected_str = (
+            f'{imposed_displacement_pin.element_header()}, imposed displacement pin'
+            f',\n\t{self.node_label}, {self.node_offset}'
+            f',\n\t{self.offset}'
+            f',\n\t{self.direction}'
+            f',\n\treference, {self.position_drive_with_idx.idx}'
+            f'{imposed_displacement_pin.element_footer()}'
+        )
+        self.assertEqual(str(imposed_displacement_pin), expected_str)
+
+    def test_imposed_displacement_pin_output_option(self):
+        # Test setting the output option to 'no'
+        imposed_displacement_pin = l.ImposedDisplacementPin(
+            idx=20,
+            node_label=self.node_label,
+            node_offset=self.node_offset,
+            offset=self.offset,
+            direction=self.direction,
+            position=self.position_drive,
+            output='no'
+        )
+        self.assertEqual(imposed_displacement_pin.output, 'no')
+        self.assertIn(',\n\toutput, no', str(imposed_displacement_pin))
+
+    # TODO: First check if MBVar class has any errors
+    # def test_imposed_displacement_pin_with_mbvar_node_label(self):
+    #     # Test creating an ImposedDisplacementPin instance with MBVar as node_label
+    #     node_var = MBVar(name='node_var', var_type='integer', expression=100)
+    #     imposed_displacement_pin = ImposedDisplacementPin(
+    #         node_label=node_var,
+    #         node_offset=self.node_offset,
+    #         offset=self.offset,
+    #         direction=self.direction,
+    #         position=self.position_drive
+    #     )
+    #     self.assertEqual(imposed_displacement_pin.node_label, node_var)
+
+    def test_imposed_displacement_pin_invalid_direction_values(self):
+        # Test passing a direction vector that is not a unit vector
+        with self.assertRaises(ValueError):
+            l.ImposedDisplacementPin(
+                node_label=self.node_label,
+                node_offset=self.node_offset,
+                offset=self.offset,
+                direction=[2.0, 0.0, 0.0],  # Not a unit vector
+                position=self.position_drive
+            )
+
+    # TODO: First check if MBVar class has any errors
+    # def test_imposed_displacement_pin_direction_with_mbvars(self):
+    #     # Test passing MBVar instances in the direction vector
+    #     direction = [MBVar('dx', 'real', 1.0), MBVar('dy', 'real', 0.0), MBVar('dz', 'real', 0.0)]
+    #     imposed_displacement_pin = ImposedDisplacementPin(
+    #         node_label=self.node_label,
+    #         node_offset=self.node_offset,
+    #         offset=self.offset,
+    #         direction=direction,
+    #         position=self.position_drive
+    #     )
+    #     self.assertEqual(imposed_displacement_pin.direction, direction)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_imposed_displacement_pin_missing_node_offset(self):
+        # Test creating an ImposedDisplacementPin instance missing node_offset
+        with self.assertRaises(Exception):
+            l.ImposedDisplacementPin(
+                idx=20,
+                node_label=self.node_label,
+                offset=self.offset,
+                direction=self.direction,
+                position=self.position_drive
+                # Missing node_offset
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_imposed_displacement_pin_missing_offset(self):
+        # Test creating an ImposedDisplacementPin instance missing offset
+        with self.assertRaises(Exception):
+            l.ImposedDisplacementPin(
+                idx=20,
+                node_label=self.node_label,
+                node_offset=self.node_offset,
+                direction=self.direction,
+                position=self.position_drive
+                # Missing offset
+            )
+
+class TestInLine(unittest.TestCase):
+    def setUp(self):
+        # Common variables used in tests
+        self.node_1_label = 1
+        self.node_2_label = 2
+        self.position = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='global')
+        self.orientation = l.Position2(relative_position=[0.0, 0.0, 1.0], reference='global')
+        self.offset = l.Position2(relative_position=[1.0, 1.0, 1.0], reference='global')
+        self.idx = 10
+
+    def test_inline_creation_valid(self):
+        # Test creating an InLine instance with all valid data
+        inline_joint = l.InLine(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            position=self.position,
+            orientation=self.orientation,
+            node_2_label=self.node_2_label,
+            offset=self.offset
+        )
+        self.assertIsInstance(inline_joint, l.InLine)
+        self.assertEqual(inline_joint.node_1_label, self.node_1_label)
+        self.assertEqual(inline_joint.position, self.position)
+        self.assertEqual(inline_joint.orientation, self.orientation)
+        self.assertEqual(inline_joint.node_2_label, self.node_2_label)
+        self.assertEqual(inline_joint.offset, self.offset)
+
+    def test_inline_creation_without_optional_fields(self):
+        # Test creating an InLine instance without optional fields
+        inline_joint = l.InLine(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            node_2_label=self.node_2_label
+        )
+        self.assertIsInstance(inline_joint, l.InLine)
+        self.assertEqual(inline_joint.node_1_label, self.node_1_label)
+        self.assertIsNone(inline_joint.position)
+        self.assertIsNone(inline_joint.orientation)
+        self.assertEqual(inline_joint.node_2_label, self.node_2_label)
+        self.assertIsNone(inline_joint.offset)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_inline_invalid_node_label_type(self):
+        # Test creating an InLine instance with invalid node_1_label type
+        with self.assertRaises(Exception):
+            l.InLine(
+                idx=self.idx,
+                node_1_label="invalid_node_label",  # Should be int or MBVar
+                node_2_label=self.node_2_label
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_inline_missing_required_fields(self):
+        # Missing node_1_label
+        with self.assertRaises(Exception):
+            l.InLine(
+                idx=self.idx,
+                node_2_label=self.node_2_label
+            )
+        # Missing node_2_label
+        with self.assertRaises(Exception):
+            l.InLine(
+                idx=self.idx,
+                node_1_label=self.node_1_label
+            )
+
+    def test_inline_str_method(self):
+        # Test the __str__ method of InLine
+        inline_joint = l.InLine(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            position=self.position,
+            orientation=self.orientation,
+            node_2_label=self.node_2_label,
+            offset=self.offset
+        )
+        expected_str = (
+            f'{inline_joint.element_header()}, in line'
+            f',\n\t{self.node_1_label}'
+            f', position, {self.position}'
+            f'\n\t, orientation, {self.orientation}'
+            f',\n\t{self.node_2_label}'
+            f', offset, {self.offset}'
+            f'{inline_joint.element_footer()}'
+        )
+        self.assertEqual(str(inline_joint), expected_str)
+
+    def test_inline_output_option(self):
+        # Test setting the output option to 'no'
+        inline_joint = l.InLine(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            node_2_label=self.node_2_label,
+            output='no'
+        )
+        self.assertEqual(inline_joint.output, 'no')
+        self.assertIn(',\n\toutput, no', str(inline_joint))
+
+    # TODO: Ensure MBVar class works correctly before running this test
+    # def test_inline_with_mbvar_node_labels(self):
+    #     # Test creating an InLine instance with MBVar as node labels
+    #     # Ensure MBVar class works correctly before running this test
+    #     try:
+    #         node_var_1 = l.MBVar(name='node_var_1', var_type='integer', expression=100)
+    #         node_var_2 = l.MBVar(name='node_var_2', var_type='integer', expression=200)
+    #         inline_joint = l.InLine(
+    #             idx=self.idx,
+    #             node_1_label=node_var_1,
+    #             node_2_label=node_var_2,
+    #             position=self.position,
+    #             orientation=self.orientation,
+    #             offset=self.offset
+    #         )
+    #         self.assertEqual(inline_joint.node_1_label, node_var_1)
+    #         self.assertEqual(inline_joint.node_2_label, node_var_2)
+    #     except Exception as e:
+    #         self.skipTest(f"MBVar class has errors: {e}")
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_inline_invalid_position_type(self):
+        # Test creating an InLine instance with invalid position type
+        with self.assertRaises(Exception):
+            l.InLine(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                position="invalid_position",  # Should be Position2 or None
+                node_2_label=self.node_2_label
+            )
+
+    def test_inline_missing_idx(self):
+        # Test creating an InLine instance without idx
+        with self.assertRaises(Exception):
+            l.InLine(
+                node_1_label=self.node_1_label,
+                node_2_label=self.node_2_label
+            )
+
+class TestInPlane(unittest.TestCase):
+    def setUp(self):
+        # Common variables used in tests
+        self.node_1_label = 1
+        self.node_2_label = 2
+        self.position = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='global')
+        self.offset = l.Position2(relative_position=[1.0, 1.0, 1.0], reference='global')
+        self.relative_direction_unit = [1.0, 0.0, 0.0]  # Unit vector
+        self.relative_direction_non_unit = [2.0, 0.0, 0.0]  # Non-unit vector
+        self.idx = 10
+
+    def test_inplane_creation_valid(self):
+        # Test creating an InPlane instance with all valid data
+        inplane_joint = l.InPlane(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            position=self.position,
+            relative_direction=self.relative_direction_unit,
+            node_2_label=self.node_2_label,
+            offset=self.offset
+        )
+        self.assertIsInstance(inplane_joint, l.InPlane)
+        self.assertEqual(inplane_joint.node_1_label, self.node_1_label)
+        self.assertEqual(inplane_joint.position, self.position)
+        self.assertEqual(inplane_joint.relative_direction, self.relative_direction_unit)
+        self.assertEqual(inplane_joint.node_2_label, self.node_2_label)
+        self.assertEqual(inplane_joint.offset, self.offset)
+
+    def test_inplane_creation_without_optional_fields(self):
+        # Test creating an InPlane instance without optional fields
+        inplane_joint = l.InPlane(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            relative_direction=self.relative_direction_unit,
+            node_2_label=self.node_2_label
+        )
+        self.assertIsInstance(inplane_joint, l.InPlane)
+        self.assertEqual(inplane_joint.node_1_label, self.node_1_label)
+        self.assertIsNone(inplane_joint.position)
+        self.assertEqual(inplane_joint.relative_direction, self.relative_direction_unit)
+        self.assertEqual(inplane_joint.node_2_label, self.node_2_label)
+        self.assertIsNone(inplane_joint.offset)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_inplane_invalid_relative_direction_unit_vector(self):
+        # Test creating an InPlane instance with non-unit relative_direction
+        with self.assertRaises(Exception) as context:
+            l.InPlane(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                relative_direction=self.relative_direction_non_unit,
+                node_2_label=self.node_2_label
+            )
+        self.assertIn("relative_direction must be a unit vector", str(context.exception))
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_inplane_invalid_relative_direction_length(self):
+        # Test creating an InPlane instance with invalid relative_direction length
+        with self.assertRaises(Exception) as context:
+            l.InPlane(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                relative_direction=[1.0, 0.0],  # Invalid length
+                node_2_label=self.node_2_label
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_inplane_invalid_node_label_type(self):
+        # Test creating an InPlane instance with invalid node_1_label type
+        with self.assertRaises(Exception):
+            l.InPlane(
+                idx=self.idx,
+                node_1_label="invalid_node_label",  # Should be int or MBVar
+                relative_direction=self.relative_direction_unit,
+                node_2_label=self.node_2_label
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_inplane_missing_required_fields(self):
+        # Missing relative_direction
+        with self.assertRaises(Exception) as context:
+            l.InPlane(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                node_2_label=self.node_2_label
+            )
+
+    def test_inplane_str_method(self):
+        # Test the __str__ method of InPlane
+        inplane_joint = l.InPlane(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            position=self.position,
+            relative_direction=self.relative_direction_unit,
+            node_2_label=self.node_2_label,
+            offset=self.offset
+        )
+        expected_str = (
+            f'{inplane_joint.element_header()}, in plane'
+            f',\n\t{self.node_1_label}'
+            f', position, {self.position}'
+            f',\n\t{self.relative_direction_unit}'
+            f',\n\t{self.node_2_label}'
+            f', offset, {self.offset}'
+            f'{inplane_joint.element_footer()}'
+        )
+        self.assertEqual(str(inplane_joint), expected_str)
+
+    def test_inplane_output_option(self):
+        # Test setting the output option to 'no'
+        inplane_joint = l.InPlane(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            relative_direction=self.relative_direction_unit,
+            node_2_label=self.node_2_label,
+            output='no'
+        )
+        self.assertEqual(inplane_joint.output, 'no')
+        self.assertIn(',\n\toutput, no', str(inplane_joint))
+
+    # # TODO: Ensure MBVar class works correctly before running this test
+    # def test_inplane_with_mbvar_node_labels(self):
+    #     # Test creating an InPlane instance with MBVar as node labels
+    #     try:
+    #         node_var_1 = l.MBVar(name='node_var_1', var_type='integer', expression=100)
+    #         node_var_2 = l.MBVar(name='node_var_2', var_type='integer', expression=200)
+    #         inplane_joint = l.InPlane(
+    #             idx=self.idx,
+    #             node_1_label=node_var_1,
+    #             relative_direction=self.relative_direction_unit,
+    #             node_2_label=node_var_2,
+    #             position=self.position,
+    #             offset=self.offset
+    #         )
+    #         self.assertEqual(inplane_joint.node_1_label, node_var_1)
+    #         self.assertEqual(inplane_joint.node_2_label, node_var_2)
+    #     except Exception as e:
+    #         self.skipTest(f"MBVar class has errors: {e}")
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_inplane_invalid_position_type(self):
+        # Test creating an InPlane instance with invalid position type
+        with self.assertRaises(Exception):
+            l.InPlane(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                position="invalid_position",  # Should be Position2 or None
+                relative_direction=self.relative_direction_unit,
+                node_2_label=self.node_2_label
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_inplane_missing_idx(self):
+        # Test creating an InPlane instance without idx
+        with self.assertRaises(Exception):
+            l.InPlane(
+                node_1_label=self.node_1_label,
+                relative_direction=self.relative_direction_unit,
+                node_2_label=self.node_2_label
+            )
+
+class TestLinearAcceleration(unittest.TestCase):
+    def setUp(self):
+        # Common variables used in tests
+        self.node_label = 1
+        self.relative_direction_unit = [1.0, 0.0, 0.0]  # Unit vector
+        self.relative_direction_non_unit = [2.0, 0.0, 0.0]  # Non-unit vector
+        self.acceleration_drive = l.ConstDriveCaller(const_value=5.0)
+        self.acceleration_drive_with_idx = l.ConstDriveCaller(const_value=5.0, idx=10)
+        self.idx = 10
+
+    def test_linear_acceleration_creation_valid(self):
+        # Test creating a LinearAcceleration instance with all valid data
+        linear_acceleration_joint = l.LinearAcceleration(
+            idx=self.idx,
+            node_label=self.node_label,
+            relative_direction=self.relative_direction_unit,
+            acceleration=self.acceleration_drive
+        )
+        self.assertIsInstance(linear_acceleration_joint, l.LinearAcceleration)
+        self.assertEqual(linear_acceleration_joint.node_label, self.node_label)
+        self.assertEqual(linear_acceleration_joint.relative_direction, self.relative_direction_unit)
+        self.assertEqual(linear_acceleration_joint.acceleration, self.acceleration_drive)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_linear_acceleration_invalid_relative_direction_unit_vector(self):
+        # Test creating a LinearAcceleration instance with non-unit relative_direction
+        with self.assertRaises(Exception) as context:
+            l.LinearAcceleration(
+                idx=self.idx,
+                node_label=self.node_label,
+                relative_direction=self.relative_direction_non_unit,
+                acceleration=self.acceleration_drive
+            )
+        self.assertIn("relative_direction must be a unit vector", str(context.exception))
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_linear_acceleration_invalid_relative_direction_length(self):
+        # Test creating a LinearAcceleration instance with invalid relative_direction length
+        with self.assertRaises(Exception):
+            l.LinearAcceleration(
+                idx=self.idx,
+                node_label=self.node_label,
+                relative_direction=[1.0, 0.0],  # Invalid length
+                acceleration=self.acceleration_drive
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_linear_acceleration_missing_required_fields(self):
+        # Missing relative_direction
+        with self.assertRaises(Exception):
+            l.LinearAcceleration(
+                idx=self.idx,
+                node_label=self.node_label,
+                acceleration=self.acceleration_drive
+            )
+        # Missing acceleration
+        with self.assertRaises(Exception):
+            l.LinearAcceleration(
+                idx=self.idx,
+                node_label=self.node_label,
+                relative_direction=self.relative_direction_unit
+            )
+        # Missing node_label
+        with self.assertRaises(Exception):
+            l.LinearAcceleration(
+                idx=self.idx,
+                relative_direction=self.relative_direction_unit,
+                acceleration=self.acceleration_drive
+            )
+
+    def test_linear_acceleration_str_method(self):
+        # Test the __str__ method of LinearAcceleration
+        linear_acceleration_joint = l.LinearAcceleration(
+            idx=self.idx,
+            node_label=self.node_label,
+            relative_direction=self.relative_direction_unit,
+            acceleration=self.acceleration_drive
+        )
+        expected_str = (
+            f'{linear_acceleration_joint.element_header()}, linear acceleration'
+            f',\n\t{self.node_label}'
+            f',\n\t {self.relative_direction_unit}'
+            f',\n\t{self.acceleration_drive}'
+            f'{linear_acceleration_joint.element_footer()}'
+        )
+        self.assertEqual(str(linear_acceleration_joint), expected_str)
+
+    def test_linear_acceleration_str_method_with_acceleration_idx(self):
+        # Test the __str__ method when acceleration.idx is provided and non-negative
+        linear_acceleration_joint = l.LinearAcceleration(
+            idx=self.idx,
+            node_label=self.node_label,
+            relative_direction=self.relative_direction_unit,
+            acceleration=self.acceleration_drive_with_idx
+        )
+        expected_str = (
+            f'{linear_acceleration_joint.element_header()}, linear acceleration'
+            f',\n\t{self.node_label}'
+            f',\n\t {self.relative_direction_unit}'
+            f',\n\treference, {self.acceleration_drive_with_idx.idx}'
+            f'{linear_acceleration_joint.element_footer()}'
+        )
+        self.assertEqual(str(linear_acceleration_joint), expected_str)
+
+    def test_linear_acceleration_output_option(self):
+        # Test setting the output option to 'no'
+        linear_acceleration_joint = l.LinearAcceleration(
+            idx=self.idx,
+            node_label=self.node_label,
+            relative_direction=self.relative_direction_unit,
+            acceleration=self.acceleration_drive,
+            output='no'
+        )
+        self.assertEqual(linear_acceleration_joint.output, 'no')
+        self.assertIn(',\n\toutput, no', str(linear_acceleration_joint))
+
+    # TODO: First check if MBVar class has any errors
+    # def test_linear_acceleration_with_mbvar_node_label(self):
+    #     # Test creating a LinearAcceleration instance with MBVar as node_label
+    #     try:
+    #         node_var = l.MBVar(name='node_var', var_type='integer', expression=100)
+    #         linear_acceleration_joint = l.LinearAcceleration(
+    #             idx=self.idx,
+    #             node_label=node_var,
+    #             relative_direction=self.relative_direction_unit,
+    #             acceleration=self.acceleration_drive
+    #         )
+    #         self.assertEqual(linear_acceleration_joint.node_label, node_var)
+    #     except Exception as e:
+    #         self.skipTest(f"MBVar class has errors: {e}")
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_linear_acceleration_invalid_acceleration_type(self):
+        # Test creating a LinearAcceleration instance with invalid acceleration type
+        with self.assertRaises(Exception):
+            l.LinearAcceleration(
+                idx=self.idx,
+                node_label=self.node_label,
+                relative_direction=self.relative_direction_unit,
+                acceleration=123  # Invalid type, should be DriveCaller or DriveCaller2
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_linear_acceleration_missing_idx(self):
+        # Test creating a LinearAcceleration instance without idx
+        with self.assertRaises(Exception):
+            l.LinearAcceleration(
+                node_label=self.node_label,
+                relative_direction=self.relative_direction_unit,
+                acceleration=self.acceleration_drive
+            )
+
+class TestLinearVelocity(unittest.TestCase):
+    def setUp(self):
+        # Common variables used in tests
+        self.node_label = 1
+        self.relative_direction_unit = [1.0, 0.0, 0.0]  # Unit vector
+        self.relative_direction_non_unit = [2.0, 0.0, 0.0]  # Non-unit vector
+        self.velocity_drive = l.ConstDriveCaller(const_value=5.0)
+        self.velocity_drive_with_idx = l.ConstDriveCaller(const_value=5.0, idx=10)
+        self.idx = 10
+
+    def test_linear_velocity_creation_valid(self):
+        # Test creating a LinearVelocity instance with all valid data
+        linear_velocity_joint = l.LinearVelocity(
+            idx=self.idx,
+            node_label=self.node_label,
+            relative_direction=self.relative_direction_unit,
+            velocity=self.velocity_drive
+        )
+        self.assertIsInstance(linear_velocity_joint, l.LinearVelocity)
+        self.assertEqual(linear_velocity_joint.node_label, self.node_label)
+        self.assertEqual(linear_velocity_joint.relative_direction, self.relative_direction_unit)
+        self.assertEqual(linear_velocity_joint.velocity, self.velocity_drive)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_linear_velocity_invalid_relative_direction_unit_vector(self):
+        # Test creating a LinearVelocity instance with non-unit relative_direction
+        with self.assertRaises(Exception) as context:
+            l.LinearVelocity(
+                idx=self.idx,
+                node_label=self.node_label,
+                relative_direction=self.relative_direction_non_unit,
+                velocity=self.velocity_drive
+            )
+        self.assertIn("relative_direction must be a unit vector", str(context.exception))
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_linear_velocity_invalid_relative_direction_length(self):
+        # Test creating a LinearVelocity instance with invalid relative_direction length
+        with self.assertRaises(Exception):
+            l.LinearVelocity(
+                idx=self.idx,
+                node_label=self.node_label,
+                relative_direction=[1.0, 0.0],  # Invalid length
+                velocity=self.velocity_drive
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_linear_velocity_missing_required_fields(self):
+        # Missing relative_direction
+        with self.assertRaises(Exception):
+            l.LinearVelocity(
+                idx=self.idx,
+                node_label=self.node_label,
+                velocity=self.velocity_drive
+            )
+        # Missing velocity
+        with self.assertRaises(Exception):
+            l.LinearVelocity(
+                idx=self.idx,
+                node_label=self.node_label,
+                relative_direction=self.relative_direction_unit
+            )
+        # Missing node_label
+        with self.assertRaises(Exception):
+            l.LinearVelocity(
+                idx=self.idx,
+                relative_direction=self.relative_direction_unit,
+                velocity=self.velocity_drive
+            )
+
+    def test_linear_velocity_str_method(self):
+        # Test the __str__ method of LinearVelocity
+        linear_velocity_joint = l.LinearVelocity(
+            idx=self.idx,
+            node_label=self.node_label,
+            relative_direction=self.relative_direction_unit,
+            velocity=self.velocity_drive
+        )
+        expected_str = (
+            f'{linear_velocity_joint.element_header()}, linear velocity'
+            f',\n\t{self.node_label}'
+            f',\n\t {self.relative_direction_unit}'
+            f',\n\t{self.velocity_drive}'
+            f'{linear_velocity_joint.element_footer()}'
+        )
+        self.assertEqual(str(linear_velocity_joint), expected_str)
+
+    def test_linear_velocity_str_method_with_velocity_idx(self):
+        # Test the __str__ method when velocity.idx is provided and non-negative
+        linear_velocity_joint = l.LinearVelocity(
+            idx=self.idx,
+            node_label=self.node_label,
+            relative_direction=self.relative_direction_unit,
+            velocity=self.velocity_drive_with_idx
+        )
+        expected_str = (
+            f'{linear_velocity_joint.element_header()}, linear velocity'
+            f',\n\t{self.node_label}'
+            f',\n\t {self.relative_direction_unit}'
+            f',\n\treference, {self.velocity_drive_with_idx.idx}'
+            f'{linear_velocity_joint.element_footer()}'
+        )
+        self.assertEqual(str(linear_velocity_joint), expected_str)
+
+    def test_linear_velocity_output_option(self):
+        # Test setting the output option to 'no'
+        linear_velocity_joint = l.LinearVelocity(
+            idx=self.idx,
+            node_label=self.node_label,
+            relative_direction=self.relative_direction_unit,
+            velocity=self.velocity_drive,
+            output='no'
+        )
+        self.assertEqual(linear_velocity_joint.output, 'no')
+        self.assertIn(',\n\toutput, no', str(linear_velocity_joint))
+
+    # # TODO: First check if MBVar class has any errors
+    # def test_linear_velocity_with_mbvar_node_label(self):
+    #     # Test creating a LinearVelocity instance with MBVar as node_label
+    #     node_var = l.MBVar(name='node_var', var_type='integer', expression=100)
+    #     linear_velocity_joint = l.LinearVelocity(
+    #         idx=self.idx,
+    #         node_label=node_var,
+    #         relative_direction=self.relative_direction_unit,
+    #         velocity=self.velocity_drive
+    #     )
+    #     self.assertEqual(linear_velocity_joint.node_label, node_var)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_linear_velocity_invalid_velocity_type(self):
+        # Test creating a LinearVelocity instance with invalid velocity type
+        with self.assertRaises(Exception):
+            l.LinearVelocity(
+                idx=self.idx,
+                node_label=self.node_label,
+                relative_direction=self.relative_direction_unit,
+                velocity=123  # Invalid type, should be DriveCaller or DriveCaller2
+            )
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_linear_velocity_missing_idx(self):
+        # Test creating a LinearVelocity instance without idx
+        with self.assertRaises(Exception):
+            l.LinearVelocity(
+                node_label=self.node_label,
+                relative_direction=self.relative_direction_unit,
+                velocity=self.velocity_drive
+            )
+
+class TestPlaneDisplacement(unittest.TestCase):
+    def setUp(self):
+        # Common variables used in tests
+        self.idx = 10
+        self.node_1_label = 1
+        self.node_2_label = 2
+        self.position_1 = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='global')
+        self.position_2 = l.Position2(relative_position=[1.0, 1.0, 1.0], reference='global')
+        self.orientation_mat_1 = l.Position2(relative_position=[1.0, 0.0, 0.0], reference='node')
+        self.orientation_mat_2 = l.Position2(relative_position=[0.0, 1.0, 0.0], reference='node')
+
+    def test_plane_displacement_creation_valid(self):
+        # Test creating a PlaneDisplacement instance with all valid data
+        plane_displacement = l.PlaneDisplacement(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            position_1=self.position_1,
+            orientation_mat_1=self.orientation_mat_1,
+            node_2_label=self.node_2_label,
+            position_2=self.position_2,
+            orientation_mat_2=self.orientation_mat_2
+        )
+        self.assertIsInstance(plane_displacement, l.PlaneDisplacement)
+        self.assertEqual(plane_displacement.node_1_label, self.node_1_label)
+        self.assertEqual(plane_displacement.position_1, self.position_1)
+        self.assertEqual(plane_displacement.orientation_mat_1, self.orientation_mat_1)
+        self.assertEqual(plane_displacement.node_2_label, self.node_2_label)
+        self.assertEqual(plane_displacement.position_2, self.position_2)
+        self.assertEqual(plane_displacement.orientation_mat_2, self.orientation_mat_2)
+
+    def test_plane_displacement_creation_without_optional_fields(self):
+        # Test creating a PlaneDisplacement instance without optional orientation matrices
+        plane_displacement = l.PlaneDisplacement(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            position_1=self.position_1,
+            node_2_label=self.node_2_label,
+            position_2=self.position_2
+        )
+        self.assertIsInstance(plane_displacement, l.PlaneDisplacement)
+        self.assertIsNone(plane_displacement.orientation_mat_1)
+        self.assertIsNone(plane_displacement.orientation_mat_2)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_plane_displacement_missing_required_fields(self):
+        # Missing position_1
+        with self.assertRaises(Exception):
+            l.PlaneDisplacement(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                node_2_label=self.node_2_label,
+                position_2=self.position_2
+            )
+        # Missing position_2
+        with self.assertRaises(Exception):
+            l.PlaneDisplacement(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                position_1=self.position_1,
+                node_2_label=self.node_2_label
+            )
+
+    def test_plane_displacement_str_method(self):
+        # Test the __str__ method of PlaneDisplacement
+        plane_displacement = l.PlaneDisplacement(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            position_1=self.position_1,
+            orientation_mat_1=self.orientation_mat_1,
+            node_2_label=self.node_2_label,
+            position_2=self.position_2,
+            orientation_mat_2=self.orientation_mat_2
+        )
+        expected_str = (
+            f'{plane_displacement.element_header()}, plane displacement'
+            f',\n\t{self.node_1_label}, position, {self.position_1}'
+            f',\n\torientation, {self.orientation_mat_1}'
+            f',\n\t{self.node_2_label}, position, {self.position_2}'
+            f',\n\torientation, {self.orientation_mat_2}'
+            f'{plane_displacement.element_footer()}'
+        )
+        self.assertEqual(str(plane_displacement), expected_str)
+
+    def test_plane_displacement_output_option(self):
+        # Test setting the output option to 'no'
+        plane_displacement = l.PlaneDisplacement(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            position_1=self.position_1,
+            node_2_label=self.node_2_label,
+            position_2=self.position_2,
+            output='no'
+        )
+        self.assertEqual(plane_displacement.output, 'no')
+        self.assertIn(',\n\toutput, no', str(plane_displacement))
+
+    # #TODO: First check if the MBVar class has any errors
+    # def test_plane_displacement_with_mbvar_node_labels(self):
+    #     # Test creating a PlaneDisplacement instance with MBVar as node labels
+    #     node_var_1 = l.MBVar(name='node_var_1', var_type='integer', expression=100)
+    #     node_var_2 = l.MBVar(name='node_var_2', var_type='integer', expression=200)
+    #     plane_displacement = l.PlaneDisplacement(
+    #         idx=self.idx,
+    #         node_1_label=node_var_1,
+    #         position_1=self.position_1,
+    #         node_2_label=node_var_2,
+    #         position_2=self.position_2
+    #     )
+    #     self.assertEqual(plane_displacement.node_1_label, node_var_1)
+    #     self.assertEqual(plane_displacement.node_2_label, node_var_2)
+
+class TestPlaneDisplacementPin(unittest.TestCase):
+    def setUp(self):
+        # Common variables used in tests
+        self.idx = 20
+        self.node_label = 1
+        self.relative_offset = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='node')
+        self.absolute_pin_position = l.Position2(relative_position=[1.0, 1.0, 1.0], reference='global')
+        self.relative_orientation_mat = l.Position2(relative_position=[1.0, 0.0, 0.0], reference='node')
+        self.absolute_pin_orientation_mat = l.Position2(relative_position=[0.0, 1.0, 0.0], reference='global')
+
+    def test_plane_displacement_pin_creation_valid(self):
+        # Test creating a PlaneDisplacementPin instance with all valid data
+        plane_displacement_pin = l.PlaneDisplacementPin(
+            idx=self.idx,
+            node_label=self.node_label,
+            relative_offset=self.relative_offset,
+            relative_orientation_mat=self.relative_orientation_mat,
+            absolute_pin_position=self.absolute_pin_position,
+            absolute_pin_orientation_mat=self.absolute_pin_orientation_mat
+        )
+        self.assertIsInstance(plane_displacement_pin, l.PlaneDisplacementPin)
+        self.assertEqual(plane_displacement_pin.node_label, self.node_label)
+        self.assertEqual(plane_displacement_pin.relative_offset, self.relative_offset)
+        self.assertEqual(plane_displacement_pin.relative_orientation_mat, self.relative_orientation_mat)
+        self.assertEqual(plane_displacement_pin.absolute_pin_position, self.absolute_pin_position)
+        self.assertEqual(plane_displacement_pin.absolute_pin_orientation_mat, self.absolute_pin_orientation_mat)
+
+    def test_plane_displacement_pin_creation_without_optional_fields(self):
+        # Test creating a PlaneDisplacementPin instance without optional orientation matrices
+        plane_displacement_pin = l.PlaneDisplacementPin(
+            idx=self.idx,
+            node_label=self.node_label,
+            relative_offset=self.relative_offset,
+            absolute_pin_position=self.absolute_pin_position
+        )
+        self.assertIsInstance(plane_displacement_pin, l.PlaneDisplacementPin)
+        self.assertIsNone(plane_displacement_pin.relative_orientation_mat)
+        self.assertIsNone(plane_displacement_pin.absolute_pin_orientation_mat)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_plane_displacement_pin_missing_required_fields(self):
+        # Missing relative_offset
+        with self.assertRaises(Exception):
+            l.PlaneDisplacementPin(
+                idx=self.idx,
+                node_label=self.node_label,
+                absolute_pin_position=self.absolute_pin_position
+            )
+        # Missing absolute_pin_position
+        with self.assertRaises(Exception):
+            l.PlaneDisplacementPin(
+                idx=self.idx,
+                node_label=self.node_label,
+                relative_offset=self.relative_offset
+            )
+
+    def test_plane_displacement_pin_str_method(self):
+        # Test the __str__ method of PlaneDisplacementPin
+        plane_displacement_pin = l.PlaneDisplacementPin(
+            idx=self.idx,
+            node_label=self.node_label,
+            relative_offset=self.relative_offset,
+            relative_orientation_mat=self.relative_orientation_mat,
+            absolute_pin_position=self.absolute_pin_position,
+            absolute_pin_orientation_mat=self.absolute_pin_orientation_mat
+        )
+        expected_str = (
+            f'{plane_displacement_pin.element_header()}, plane displacement pin'
+            f',\n\t{self.node_label}'
+            f',\n\t\tposition, {self.relative_offset}'
+            f',\n\t\torientation, {self.relative_orientation_mat}'
+            f',\n\tposition, {self.absolute_pin_position}'
+            f',\n\torientation, {self.absolute_pin_orientation_mat}'
+            f'{plane_displacement_pin.element_footer()}'
+        )
+        self.assertEqual(str(plane_displacement_pin), expected_str)
+
+    def test_plane_displacement_pin_output_option(self):
+        # Test setting the output option to 'no'
+        plane_displacement_pin = l.PlaneDisplacementPin(
+            idx=self.idx,
+            node_label=self.node_label,
+            relative_offset=self.relative_offset,
+            absolute_pin_position=self.absolute_pin_position,
+            output='no'
+        )
+        self.assertEqual(plane_displacement_pin.output, 'no')
+        self.assertIn(',\n\toutput, no', str(plane_displacement_pin))
+
+    # TODO: First check if MBVar class has any errors
+    # def test_plane_displacement_pin_with_mbvar_node_label(self):
+    #     # Test creating a PlaneDisplacementPin instance with MBVar as node_label
+    #     node_var = l.MBVar(name='node_var', var_type='integer', expression=100)
+    #     plane_displacement_pin = l.PlaneDisplacementPin(
+    #         idx=self.idx,
+    #         node_label=node_var,
+    #         relative_offset=self.relative_offset,
+    #         absolute_pin_position=self.absolute_pin_position
+    #     )
+    #     self.assertEqual(plane_displacement_pin.node_label, node_var)
+
         
 if __name__ == '__main__':
     unittest.main()

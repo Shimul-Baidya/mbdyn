@@ -814,7 +814,7 @@ class AngularAcceleration(Element2):
     }
 
     node_label: Union[int, MBVar]
-    relative_direction: List[Union[int, float, MBVar]] = Field(..., min_items=3, max_items=3)
+    relative_direction: List[Union[float, MBVar]] = Field(..., min_items=3, max_items=3)
     acceleration: Union['DriveCaller', 'DriveCaller2']
 
     def element_type(self):
@@ -843,7 +843,7 @@ class AngularVelocity(Element2):
     }
 
     node_label: Union[int, MBVar]
-    relative_direction: List[Union[int, float, MBVar]] = Field(..., min_items=3, max_items=3)
+    relative_direction: List[Union[float, MBVar]] = Field(..., min_items=3, max_items=3)
     velocity: Union['DriveCaller', 'DriveCaller2']
 
     def element_type(self):
@@ -1137,9 +1137,8 @@ class Distance(Element2):
     This joint forces the distance between two points, each relative to a node, to assume the value indicated
     by the drive. If no offset is given, the points are coincident with the node themselves.
     """
-    model_config = {
-        'arbitrary_types_allowed': True
-    }
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     node_1_label: Union[int, MBVar]
     position_1: Optional[Position2] = None
     node_2_label: Union[int, MBVar]
@@ -1174,8 +1173,8 @@ class DriveDisplacement(Element2):
     in the form of a vector that expresses the direction of the displacement in the reference frame of node 1,
     whose amplitude is defined by a drive.
     '''
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
 
     node_1_label: Union[int, MBVar]
     position_1: Position2
@@ -1200,8 +1199,7 @@ class DriveDisplacementPin(Element2):
     in the form of a vector that expresses the direction of the displacement in the reference frame of node 1,
     whose amplitude is defined by a drive.
     '''
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     node_label: Union[int, MBVar]
     node_offset: Position2
@@ -1224,8 +1222,7 @@ class DriveHinge(Element2):
     This joint imposes the relative orientation between two nodes, in the form of a rotation about an axis
     whose amplitude is defined by a drive.
     '''
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     node_1_label: Union[int, MBVar]
     relative_orientation_mat_1: Optional[Position2]
@@ -1296,21 +1293,20 @@ class ImposedDisplacement(Element2):
     along a given direction that is rigidly attached to the first node. The amplitude of the displacement is
     defined by a drive.
     '''
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     node_1_label: Union[int, MBVar]
     position_1: Position2
     node_2_label: Union[int, MBVar]
     position_2: Position2
-    direction: List[Union[int, float, MBVar]] = Field(..., min_items=3, max_items=3)
+    direction: List[Union[float, MBVar]] = Field(..., min_items=3, max_items=3)
     relative_position: Union['DriveCaller', 'DriveCaller2']
 
     def element_type(self):
         return 'joint'
 
     def __str__(self):
-        s = f'{self.element_header()}, drive displacement'
+        s = f'{self.element_header()}, imposed displacement'
         s += f''',\n\t{self.node_1_label}, {self.position_1}'''
         s += f''',\n\t{self.node_2_label}, {self.position_2}'''
         s += f''',\n\t{self.direction}'''
@@ -1318,6 +1314,215 @@ class ImposedDisplacement(Element2):
         s += self.element_footer()
         return s
 
+class ImposedDisplacementPin(Element2):
+    '''
+    This joint imposes the absolute displacement of a point optionally offset from a structural node, along
+    a direction defined in the absolute reference frame. The amplitude of the displacement is defined by a
+    drive.
+    '''
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    node_label: Union[int, MBVar]
+    node_offset: Position2
+    offset: Position2
+    direction: List[Union[float, MBVar]] = Field(..., min_items=3, max_items=3)
+    position: Union['DriveCaller', 'DriveCaller2']
+
+    def element_type(self):
+        return 'joint'
+
+    def __str__(self):
+        s = f'{self.element_header()}, imposed displacement pin'
+        s += f''',\n\t{self.node_label}, {self.node_offset}'''
+        s += f''',\n\t{self.offset}'''
+        s += f''',\n\t{self.direction}'''
+        if self.position.idx is not None and self.position.idx >= 0:
+            s += f''',\n\treference, {self.position.idx}'''
+        else:
+            s += f''',\n\t{self.position}'''
+        s += self.element_footer()
+        return s
+    
+class InLine(Element2):
+    '''
+    This joint forces a point relative to the second node to move along a line attached to the first node.
+    '''
+    
+    node_1_label: Union[int, MBVar]
+    position: Optional[Position2] = None
+    orientation: Optional[Union[Position2, List]] = None
+    node_2_label: Union[int, MBVar]
+    offset: Optional[Position2] = None
+
+    def element_type(self):
+        return 'joint'
+
+    def __str__(self):
+        s = f'{self.element_header()}, in line'
+        s += f''',\n\t{self.node_1_label}'''
+        if self.position is not None:
+            s += f''', position, {self.position}'''
+        if self.orientation is not None:
+            s += f'''\n\t, orientation, {self.orientation}'''
+        s += f''',\n\t{self.node_2_label}'''
+        if self.offset is not None:
+            s += f''', offset, {self.offset}'''
+        s += self.element_footer()
+        return s
+    
+class InPlane(Element2):
+    '''
+    This joint forces a point relative to the second node to move in a plane attached to the first node.
+    '''
+    
+    node_1_label: Union[int, MBVar]
+    position: Optional[Position2] = None
+    relative_direction: List[Union[float, MBVar]] = Field(..., min_items=3, max_items=3)
+    node_2_label: Union[int, MBVar]
+    offset: Optional[Position2] = None
+
+    @field_validator('relative_direction')
+    def validate_relative_direction(cls, v):
+        magnitude = sum(i**2 for i in v) ** 0.5
+        if not (0.999 <= magnitude <= 1.001):  # Allowing some tolerance for floating-point precision
+            raise ValueError("relative_direction must be a unit vector (magnitude = 1)")
+        return v
+
+    def element_type(self):
+        return 'joint'
+
+    def __str__(self):
+        s = f'{self.element_header()}, in plane'
+        s += f''',\n\t{self.node_1_label}'''
+        if self.position is not None:
+            s += f''', position, {self.position}'''
+        s += f''',\n\t{self.relative_direction}'''
+        s += f''',\n\t{self.node_2_label}'''
+        if self.offset is not None:
+            s += f''', offset, {self.offset}'''
+        s += self.element_footer()
+        return s
+    
+class LinearAcceleration(Element2):
+    '''
+    This joint imposes the absolute linear acceleration of a node along a given axis.
+    '''
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
+    node_label: Union[int, MBVar]
+    relative_direction: List[Union[float, MBVar]] = Field(..., min_items=3, max_items=3)
+    acceleration: Union['DriveCaller', 'DriveCaller2']
+
+    @field_validator('relative_direction')
+    def validate_relative_direction(cls, v):
+        magnitude = sum(i**2 for i in v) ** 0.5
+        if not (0.999 <= magnitude <= 1.001):  # Allowing some tolerance for floating-point precision
+            raise ValueError("relative_direction must be a unit vector (magnitude = 1)")
+        return v
+
+    def element_type(self):
+        return 'joint'
+
+    def __str__(self):
+        s = f'{self.element_header()}, linear acceleration'
+        s += f''',\n\t{self.node_label}'''
+        s += f''',\n\t {self.relative_direction}'''
+        if self.acceleration.idx is not None and self.acceleration.idx >= 0:
+            s += f''',\n\treference, {self.acceleration.idx}'''
+        else:
+            s += f''',\n\t{self.acceleration}'''
+        s += self.element_footer()
+        return s
+    
+class LinearVelocity(Element2):
+    '''
+    This joint imposes the absolute linear velocity of a node along a given axis.
+    '''
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
+    node_label: Union[int, MBVar]
+    relative_direction: List[Union[float, MBVar]] = Field(..., min_items=3, max_items=3)
+    velocity: Union['DriveCaller', 'DriveCaller2']
+
+    @field_validator('relative_direction')
+    def validate_relative_direction(cls, v):
+        magnitude = sum(i**2 for i in v) ** 0.5
+        if not (0.999 <= magnitude <= 1.001):  # Allowing some tolerance for floating-point precision
+            raise ValueError("relative_direction must be a unit vector (magnitude = 1)")
+        return v
+
+    def element_type(self):
+        return 'joint'
+
+    def __str__(self):
+        s = f'{self.element_header()}, linear velocity'
+        s += f''',\n\t{self.node_label}'''
+        s += f''',\n\t {self.relative_direction}'''
+        if self.velocity.idx is not None and self.velocity.idx >= 0:
+            s += f''',\n\treference, {self.velocity.idx}'''
+        else:
+            s += f''',\n\t{self.velocity}'''
+        s += self.element_footer()
+        return s
+    
+class Modal(Element2):
+    pass
+
+class PlaneDisplacement(Element2):
+    '''
+    This joint allows two nodes to move in the common relative 1–2 plane and to rotate about the common
+    relative axis 3.
+    '''
+
+    node_1_label: Union[int, MBVar]
+    position_1: Position2
+    orientation_mat_1: Optional[Union[Position2, List]] = None
+    node_2_label: Union[int, MBVar]
+    position_2: Position2
+    orientation_mat_2: Optional[Union[Position2, List]] = None
+
+    def element_type(self):
+        return 'joint'
+    
+    def __str__(self):
+        s = f'{self.element_header()}, plane displacement'
+        s += f''',\n\t{self.node_1_label}, position, {self.position_1}'''
+        if self.orientation_mat_1 is not None:
+            s += f''',\n\torientation, {self.orientation_mat_1}'''
+        s += f''',\n\t{self.node_2_label}, position, {self.position_2}'''
+        if self.orientation_mat_2 is not None:
+            s += f''',\n\torientation, {self.orientation_mat_2}'''
+        s += self.element_footer()
+        return s
+    
+class PlaneDisplacementPin(Element2):
+    '''
+    This joint allows a node to move in the relative 1–2 plane and to rotate about the relative axis 3 with
+    respect to an absolute point and plane.
+    '''
+
+    node_label: Union[int, MBVar]
+    relative_offset: Position2
+    relative_orientation_mat: Optional[Union[Position2, List]] = None
+    absolute_pin_position: Position2
+    absolute_pin_orientation_mat: Optional[Union[Position2, List]] = None
+
+    def element_type(self):
+        return 'joint'
+    
+    def __str__(self):
+        s = f'{self.element_header()}, plane displacement pin'
+        s += f''',\n\t{self.node_label}'''
+        s += f''',\n\t\tposition, {self.relative_offset}'''
+        if self.relative_orientation_mat is not None:
+            s += f''',\n\t\torientation, {self.relative_orientation_mat}'''
+        s += f''',\n\tposition, {self.absolute_pin_position}'''
+        if self.absolute_pin_orientation_mat is not None:
+            s += f''',\n\torientation, {self.absolute_pin_orientation_mat}'''
+        s += self.element_footer()
+        return s
+
+    
 class Body(Element):
     def __init__(self, idx, node, mass, position, inertial_matrix, inertial = null,
             output = 'yes'):
@@ -4469,6 +4674,7 @@ AngularAcceleration.model_rebuild()
 AngularVelocity.model_rebuild()
 AxialRotation.model_rebuild()
 Brake.model_rebuild()
+ImposedDisplacement.model_rebuild()
 ImposedDisplacement.model_rebuild()
 
 
