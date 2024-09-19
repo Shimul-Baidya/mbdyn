@@ -4225,5 +4225,325 @@ class TestRodBezier(unittest.TestCase):
         self.assertEqual(rod_bezier.output, 'no')
         self.assertIn(',\n\toutput, no', str(rod_bezier))
         
+class TestSphericalHinge2(unittest.TestCase):
+    def setUp(self):
+        # Common variables used in tests
+        self.idx = 100
+        self.node_1_label = 1
+        self.node_2_label = 2
+        self.position_1 = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='node')
+        self.orientation_mat_1 = l.Position2(relative_position=[1.0, 0.0, 0.0], reference='global')
+        self.position_2 = l.Position2(relative_position=[1.0, 1.0, 1.0], reference='node')
+        self.orientation_mat_2 = l.Position2(relative_position=[0.0, 1.0, 0.0], reference='global')
+
+    def test_spherical_hinge_creation_valid(self):
+        # Test creating a SphericalHinge instance with all valid data
+        spherical_hinge = l.SphericalHinge2(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            position_1=self.position_1,
+            orientation_mat_1=self.orientation_mat_1,
+            node_2_label=self.node_2_label,
+            position_2=self.position_2,
+            orientation_mat_2=self.orientation_mat_2
+        )
+        self.assertIsInstance(spherical_hinge, l.SphericalHinge2)
+        self.assertEqual(spherical_hinge.node_1_label, self.node_1_label)
+        self.assertEqual(spherical_hinge.position_1, self.position_1)
+        self.assertEqual(spherical_hinge.orientation_mat_1, self.orientation_mat_1)
+        self.assertEqual(spherical_hinge.node_2_label, self.node_2_label)
+        self.assertEqual(spherical_hinge.position_2, self.position_2)
+        self.assertEqual(spherical_hinge.orientation_mat_2, self.orientation_mat_2)
+
+    def test_spherical_hinge_creation_without_optional_fields(self):
+        # Test creating a SphericalHinge instance without optional fields
+        spherical_hinge = l.SphericalHinge2(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            node_2_label=self.node_2_label
+        )
+        self.assertIsInstance(spherical_hinge, l.SphericalHinge2)
+        self.assertIsNone(spherical_hinge.position_1)
+        self.assertIsNone(spherical_hinge.orientation_mat_1)
+        self.assertIsNone(spherical_hinge.position_2)
+        self.assertIsNone(spherical_hinge.orientation_mat_2)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_spherical_hinge_missing_required_fields(self):
+        # Missing node_1_label
+        with self.assertRaises(Exception):
+            l.SphericalHinge2(
+                idx=self.idx,
+                node_2_label=self.node_2_label
+            )
+        # Missing node_2_label
+        with self.assertRaises(Exception):
+            l.SphericalHinge2(
+                idx=self.idx,
+                node_1_label=self.node_1_label
+            )
+
+    def test_spherical_hinge_str_method(self):
+        # Test the __str__ method of SphericalHinge
+        spherical_hinge = l.SphericalHinge2(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            position_1=self.position_1,
+            orientation_mat_1=self.orientation_mat_1,
+            node_2_label=self.node_2_label,
+            position_2=self.position_2,
+            orientation_mat_2=self.orientation_mat_2
+        )
+        expected_str = (
+            f'{spherical_hinge.element_header()}, spherical hinge'
+            f',\n\t{self.node_1_label}'
+            f',\n\t\tposition, {self.position_1}'
+            f',\n\t\torientation, {self.orientation_mat_1}'
+            f',\n\t{self.node_2_label}'
+            f',\n\t\tposition, {self.position_2}'
+            f',\n\t\torientation, {self.orientation_mat_2}'
+            f'{spherical_hinge.element_footer()}'
+        )
+        self.assertEqual(str(spherical_hinge), expected_str)
+
+    # # TODO: Check if MBVar class has errors
+    # def test_spherical_hinge_with_mbvar_node_labels(self):
+    #     # Test creating a SphericalHinge instance with MBVar as node labels
+    #     node_var_1 = l.MBVar(name='node_var_1', var_type='integer', expression=100)
+    #     node_var_2 = l.MBVar(name='node_var_2', var_type='integer', expression=200)
+    #     spherical_hinge = l.SphericalHinge2(
+    #         idx=self.idx,
+    #         node_1_label=node_var_1,
+    #         node_2_label=node_var_2
+    #     )
+    #     self.assertEqual(spherical_hinge.node_1_label, node_var_1)
+    #     self.assertEqual(spherical_hinge.node_2_label, node_var_2)
+
+    def test_spherical_hinge_output_option(self):
+        # Test setting the output option to 'no'
+        spherical_hinge = l.SphericalHinge2(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            node_2_label=self.node_2_label,
+            output='no'
+        )
+        self.assertEqual(spherical_hinge.output, 'no')
+        self.assertIn(',\n\toutput, no', str(spherical_hinge))
+
+class TestSphericalPin(unittest.TestCase):
+
+    def setUp(self):
+        # Common variables used in tests
+        self.idx = 100
+        self.node_label = 1
+        self.position = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='global')
+        self.orientation_mat = l.Position2(relative_position=[1.0, 0.0, 0.0], reference='node')
+        self.absolute_pin_position = l.Position2(relative_position=[2.0, 2.0, 2.0], reference='global')
+        self.absolute_orientation_mat = l.Position2(relative_position=[0.0, 1.0, 0.0], reference='node')
+
+    def test_spherical_pin_creation_valid(self):
+        # Test creating a SphericalPin instance with all valid data
+        spherical_pin = l.SphericalPin(
+            idx=self.idx,
+            node_label=self.node_label,
+            position=self.position,
+            orientation_mat=self.orientation_mat,
+            absolute_pin_position=self.absolute_pin_position,
+            absolute_orientation_mat=self.absolute_orientation_mat
+        )
+        self.assertIsInstance(spherical_pin, l.SphericalPin)
+        self.assertEqual(spherical_pin.node_label, self.node_label)
+        self.assertEqual(spherical_pin.position, self.position)
+        self.assertEqual(spherical_pin.orientation_mat, self.orientation_mat)
+        self.assertEqual(spherical_pin.absolute_pin_position, self.absolute_pin_position)
+        self.assertEqual(spherical_pin.absolute_orientation_mat, self.absolute_orientation_mat)
+
+    def test_spherical_pin_creation_without_optional_fields(self):
+        # Test creating a SphericalPin instance without optional fields
+        spherical_pin = l.SphericalPin(
+            idx=self.idx,
+            node_label=self.node_label,
+            absolute_pin_position=self.absolute_pin_position
+        )
+        self.assertIsInstance(spherical_pin, l.SphericalPin)
+        self.assertEqual(spherical_pin.node_label, self.node_label)
+        self.assertIsNone(spherical_pin.position)
+        self.assertIsNone(spherical_pin.orientation_mat)
+        self.assertEqual(spherical_pin.absolute_pin_position, self.absolute_pin_position)
+        self.assertIsNone(spherical_pin.absolute_orientation_mat)
+
+    def test_spherical_pin_str_method(self):
+        # Test the __str__ method of SphericalPin
+        spherical_pin = l.SphericalPin(
+            idx=self.idx,
+            node_label=self.node_label,
+            position=self.position,
+            orientation_mat=self.orientation_mat,
+            absolute_pin_position=self.absolute_pin_position,
+            absolute_orientation_mat=self.absolute_orientation_mat
+        )
+        expected_str = (
+            f'{spherical_pin.element_header()}, spherical pin'
+            f',\n\t{self.node_label}'
+            f',\n\t\tposition, {self.position}'
+            f',\n\t\torientation, {self.orientation_mat}'
+            f',\n\tposition, {self.absolute_pin_position}'
+            f',\n\torientation, {self.absolute_orientation_mat}'
+            f'{spherical_pin.element_footer()}'
+        )
+        self.assertEqual(str(spherical_pin), expected_str)
+
+    def test_spherical_pin_with_minimal_data(self):
+        # Test creating SphericalPin with only required fields
+        spherical_pin = l.SphericalPin(
+            idx=self.idx,
+            node_label=self.node_label,
+            absolute_pin_position=self.absolute_pin_position
+        )
+        self.assertEqual(spherical_pin.node_label, self.node_label)
+        self.assertIsNone(spherical_pin.position)
+        self.assertIsNone(spherical_pin.orientation_mat)
+        self.assertEqual(spherical_pin.absolute_pin_position, self.absolute_pin_position)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_spherical_pin_missing_required_fields(self):
+        # Test creating a SphericalPin instance without required fields
+        with self.assertRaises(Exception):
+            l.SphericalPin(
+                idx=self.idx,
+                node_label=self.node_label
+            )
+
+    def test_spherical_pin_output_option(self):
+        # Test setting the output option to 'no'
+        spherical_pin = l.SphericalPin(
+            idx=self.idx,
+            node_label=self.node_label,
+            absolute_pin_position=self.absolute_pin_position,
+            output='no'
+        )
+        self.assertEqual(spherical_pin.output, 'no')
+        self.assertIn(',\n\toutput, no', str(spherical_pin))
+
+    # TODO: Check if MBVar class has errors
+    # # Test with MBVar (assuming MBVar implementation is valid)
+    # def test_spherical_pin_with_mbvar_node_label(self):
+    #     node_var = l.MBVar(name='node_var', var_type='integer', expression=100)
+    #     spherical_pin = l.SphericalPin(
+    #         idx=self.idx,
+    #         node_label=node_var,
+    #         absolute_pin_position=self.absolute_pin_position
+    #     )
+    #     self.assertEqual(spherical_pin.node_label, node_var)
+
+class TestViscousBody(unittest.TestCase):
+
+    def setUp(self):
+        # Common variables used in tests
+        self.idx = 100
+        self.node_label = 1
+        self.position = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='global')
+        self.orientation_mat = l.Position2(relative_position=[1.0, 0.0, 0.0], reference='node')
+        self.const_law_valid = l.LinearViscous(viscosity=5.0, law_type=l.ConstitutiveLaw.LawType.D6_ISOTROPIC_LAW)
+        self.const_law_invalid = l.LinearViscous(viscosity=5.0, law_type=l.ConstitutiveLaw.LawType.D3_ISOTROPIC_LAW)
+        self.named_const_law = l.NamedConstitutiveLaw("linear viscous generic")
+
+    def test_viscous_body_creation_valid(self):
+        # Test creating a ViscousBody instance with valid 6D const_law
+        viscous_body = l.ViscousBody(
+            idx=self.idx,
+            node_label=self.node_label,
+            position=self.position,
+            orientation_mat=self.orientation_mat,
+            const_law=self.const_law_valid
+        )
+        self.assertIsInstance(viscous_body, l.ViscousBody)
+        self.assertEqual(viscous_body.node_label, self.node_label)
+        self.assertEqual(viscous_body.const_law, self.const_law_valid)
+
+    def test_viscous_body_with_named_const_law(self):
+    # Test creating a ViscousBody instance with NamedConstitutiveLaw
+        viscous_body = l.ViscousBody(
+            idx=self.idx,
+            node_label=self.node_label,
+            const_law=self.named_const_law
+        )
+        self.assertIsInstance(viscous_body, l.ViscousBody)
+        self.assertEqual(viscous_body.const_law, self.named_const_law)
+
+
+    def test_viscous_body_creation_without_optional_fields(self):
+        # Test creating a ViscousBody instance without optional fields
+        viscous_body = l.ViscousBody(
+            idx=self.idx,
+            node_label=self.node_label,
+            const_law=self.const_law_valid
+        )
+        self.assertIsInstance(viscous_body, l.ViscousBody)
+        self.assertEqual(viscous_body.node_label, self.node_label)
+        self.assertIsNone(viscous_body.position)
+        self.assertIsNone(viscous_body.orientation_mat)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_viscous_body_invalid_const_law(self):
+        # Test creating a ViscousBody instance with invalid 3D const_law
+        with self.assertRaises(Exception) as context:
+            l.ViscousBody(
+                idx=self.idx,
+                node_label=self.node_label,
+                const_law=self.const_law_invalid
+            )
+        self.assertIn("const_law must be a 6D constitutive law with law_type 'D6_ISOTROPIC_LAW'", str(context.exception))
+
+    def test_viscous_body_str_method(self):
+        # Test the __str__ method of ViscousBody
+        viscous_body = l.ViscousBody(
+            idx=self.idx,
+            node_label=self.node_label,
+            position=self.position,
+            orientation_mat=self.orientation_mat,
+            const_law=self.const_law_valid
+        )
+        expected_str = (
+            f'{viscous_body.element_header()}, viscous body'
+            f',\n\t{self.node_label}'
+            f',\n\t\tposition, {self.position}'
+            f',\n\t\torientation, {self.orientation_mat}'
+            f',\n\t{self.const_law_valid}'
+            f'{viscous_body.element_footer()}'
+        )
+        self.assertEqual(str(viscous_body), expected_str)
+
+    def test_viscous_body_output_option(self):
+        # Test setting the output option to 'no'
+        viscous_body = l.ViscousBody(
+            idx=self.idx,
+            node_label=self.node_label,
+            const_law=self.const_law_valid,
+            output='no'
+        )
+        self.assertEqual(viscous_body.output, 'no')
+        self.assertIn(',\n\toutput, no', str(viscous_body))
+
+    # # TODO: Check if MBVar class has errors
+    # def test_viscous_body_with_mbvar_node_label(self):
+    #     node_var = l.MBVar(name='node_var', var_type='integer', expression=100)
+    #     viscous_body = l.ViscousBody(
+    #         idx=self.idx,
+    #         node_label=node_var,
+    #         const_law=self.const_law_valid
+    #     )
+    #     self.assertEqual(viscous_body.node_label, node_var)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_viscous_body_missing_required_field(self):
+    # Test missing required 'const_law' field
+        with self.assertRaises(Exception):
+            viscous_body = l.ViscousBody(
+                idx=self.idx,
+                node_label=self.node_label
+                # const_law is missing here
+            )
+
 if __name__ == '__main__':
     unittest.main()

@@ -1845,6 +1845,110 @@ class RodBezier(Element2):
         s += self.element_footer()
         return s
     
+class SphericalHinge2(Element2):
+    '''
+    This joint constrains the relative position of two nodes; the relative orientation is not constrained.
+
+    The joint is defined by two nodes and optional position and orientation offsets. The positions are defined
+    by the `position` keyword and the orientations by the `orientation` keyword. If not specified, default
+    values are assumed (zero offset for position and identity matrix for orientation).
+
+    Note: The orientation matrices are used for output purposes only.
+    '''
+
+    node_1_label: Union[int, MBVar]
+    position_1: Optional[Position2] = None
+    orientation_mat_1: Optional[Union[Position2, list]] = None
+    node_2_label: Union[int, MBVar]
+    position_2: Optional[Position2] = None
+    orientation_mat_2: Optional[Union[Position2, list]] = None
+
+    def element_type(self):
+        return 'joint'
+
+    def __str__(self):
+        s = f'{self.element_header()}, spherical hinge'
+        s += f',\n\t{self.node_1_label}'
+        if self.position_1 is not None:
+            s += f',\n\t\tposition, {self.position_1}'
+        if self.orientation_mat_1 is not None:
+            s += f',\n\t\torientation, {self.orientation_mat_1}'
+        s += f',\n\t{self.node_2_label}'
+        if self.position_2 is not None:
+            s += f',\n\t\tposition, {self.position_2}'
+        if self.orientation_mat_2 is not None:
+            s += f',\n\t\torientation, {self.orientation_mat_2}'
+        s += self.element_footer()
+        return s
+
+class SphericalPin(Element2):
+    '''
+    This joint constrains the absolute position of a node; the relative orientation is not constrained.
+    **Note**: This joint is equivalent to a spherical hinge when one node is grounded.
+    '''
+
+    node_label: Union[int, 'MBVar']
+    position: Optional[Position2] = None
+    orientation_mat: Optional[Union[Position2, list]] = None
+    absolute_pin_position: Position2
+    absolute_orientation_mat: Optional[Union[Position2]] = None
+
+    def element_type(self):
+        return 'joint'
+
+    def __str__(self):
+        s = f'{self.element_header()}, spherical pin'
+        s += f',\n\t{self.node_label}'
+        if self.position is not None:
+            s += f',\n\t\tposition, {self.position}'
+        if self.orientation_mat is not None:
+            s += f',\n\t\torientation, {self.orientation_mat}'
+        s += f',\n\tposition, {self.absolute_pin_position}'
+        if self.absolute_orientation_mat is not None:
+            s += f',\n\torientation, {self.absolute_orientation_mat}'
+        s += self.element_footer()
+        return s
+    
+class ViscousBody(Element2):
+    '''
+    This element defines a force and a moment that depend on the absolute linear and angular velocity of
+    a body, projected in the reference frame of the node itself. The force and moment are defined as a 6D
+    viscous constitutive law.
+    '''
+    model_config = {
+        'arbitrary_types_allowed': True
+    }
+    
+    node_label: Union[int, MBVar]
+    position: Optional[Position2] = None
+    orientation_mat: Optional[Union[Position2, list]] = None
+    const_law: Union['ConstitutiveLaw','NamedConstitutiveLaw']  # Should be a 6D constitutive law
+
+    def element_type(self):
+        return 'joint'
+    
+    @field_validator('const_law')
+    def validate_const_law(cls, v):
+        if isinstance(v, ConstitutiveLaw):
+            if v.law_type != ConstitutiveLaw.LawType.D6_ISOTROPIC_LAW:
+                raise ValueError("const_law must be a 6D constitutive law with law_type 'D6_ISOTROPIC_LAW'")
+            return v
+        elif isinstance(v, NamedConstitutiveLaw):
+            return v
+        else:
+            raise TypeError("const_law must be an instance of ConstitutiveLaw or NamedConstitutiveLaw")
+    
+    def __str__(self):
+        s = f'{self.element_header()}, viscous body'
+        s += f',\n\t{self.node_label}'
+        if self.position is not None:
+            s += f',\n\t\tposition, {self.position}'
+        if self.orientation_mat is not None:
+            s += f',\n\t\torientation, {self.orientation_mat}'
+        s += f',\n\t{self.const_law}'
+        s += self.element_footer()
+        return s
+    
 class Body(Element):
     def __init__(self, idx, node, mass, position, inertial_matrix, inertial = null,
             output = 'yes'):
