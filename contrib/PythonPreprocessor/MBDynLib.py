@@ -1671,13 +1671,16 @@ class Rod2(Element2):
     the relative position of the points: it is the line that passes through them. If no offset is defined, the
     points are the nodes themselves.
     '''
+    model_config = {
+        'arbitrary_types_allowed': True
+    }
 
     node_1_label: Union[int, MBVar]
     position_1: Optional[Position2] = None
     node_2_label: Union[int, MBVar]
     position_2: Optional[Position2] = None
     rod_length: Union[float, MBVar, str]  # Can be a float or 'from nodes'
-    const_law: 'ConstitutiveLaw'
+    const_law: Union['ConstitutiveLaw', 'NamedConstitutiveLaw']
 
     def element_type(self):
         return 'joint'
@@ -1690,14 +1693,17 @@ class Rod2(Element2):
             return v.lower()
         else:
             return v
-        
+    
     @field_validator('const_law')
     def validate_const_law(cls, v):
-        if not isinstance(v, ConstitutiveLaw):
-            raise TypeError("const_law must be an instance of ConstitutiveLaw")
-        if v.law_type != ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW:
-            raise ValueError("const_law must be a 1D constitutive law with law_type 'SCALAR_ISOTROPIC_LAW'")
-        return v
+        if isinstance(v, ConstitutiveLaw):
+            if v.law_type != ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW:
+                raise ValueError("const_law must be a 1D constitutive law with law_type 'SCALAR_ISOTROPIC_LAW'")
+            return v
+        elif isinstance(v, NamedConstitutiveLaw):
+            return v
+        else:
+            raise TypeError("const_law must be an instance of ConstitutiveLaw or NamedConstitutiveLaw")
 
     def __str__(self):
         s = f'{self.element_header()}, rod'
@@ -1716,13 +1722,16 @@ class RodWithOffset(Element2):
     '''
     Analogous to the rod joint with the optional offsets.
     '''
+    model_config = {
+        'arbitrary_types_allowed': True
+    }
 
     node_1_label: Union[int, MBVar]
     position_1: Position2  # Required
     node_2_label: Union[int, MBVar]
     position_2: Position2  # Required
     rod_length: Union[float, MBVar, str]  # Can be a float, MBVar or 'from nodes'
-    const_law: 'ConstitutiveLaw'  # Should be a 1D constitutive law
+    const_law: Union['ConstitutiveLaw', 'NamedConstitutiveLaw']  # Should be a 1D constitutive law
 
     def element_type(self):
         return 'joint'
@@ -1738,11 +1747,14 @@ class RodWithOffset(Element2):
 
     @field_validator('const_law')
     def validate_const_law(cls, v):
-        if not isinstance(v, ConstitutiveLaw):
-            raise TypeError("const_law must be an instance of ConstitutiveLaw")
-        if v.law_type != ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW:
-            raise ValueError("const_law must be a 1D constitutive law with law_type 'SCALAR_ISOTROPIC_LAW'")
-        return v
+        if isinstance(v, ConstitutiveLaw):
+            if v.law_type != ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW:
+                raise ValueError("const_law must be a 1D constitutive law with law_type 'SCALAR_ISOTROPIC_LAW'")
+            return v
+        elif isinstance(v, NamedConstitutiveLaw):
+            return v
+        else:
+            raise TypeError("const_law must be an instance of ConstitutiveLaw or NamedConstitutiveLaw")
 
     def __str__(self):
         s = f'{self.element_header()}, rod with offset'
@@ -1775,6 +1787,9 @@ class RodBezier(Element2):
     The absolute value of the force depends on the strain and strain rate of the curve as in the standard rod
     element as determined by the ConstitutiveLaw<1D> <const_law>.
     '''
+    model_config = {
+        'arbitrary_types_allowed': True
+    }
 
     node_1_label: Union[int, MBVar]
     position_1: Position2
@@ -1783,7 +1798,7 @@ class RodBezier(Element2):
     position_3: Position2
     position_4: Position2
     rod_length: Union[float, MBVar, str]  # Can be a float or 'from nodes'
-    const_law: 'ConstitutiveLaw'  # Should be a 1D constitutive law
+    const_law: Union['ConstitutiveLaw', 'NamedConstitutiveLaw']  # Should be a 1D constitutive law
     integration_order: int = 2  # Defaults to 2
     integration_segments: int = 3  # Defaults to 3
 
@@ -1801,11 +1816,14 @@ class RodBezier(Element2):
 
     @field_validator('const_law')
     def validate_const_law(cls, v):
-        if not isinstance(v, ConstitutiveLaw):
-            raise TypeError("const_law must be an instance of ConstitutiveLaw")
-        if v.law_type != ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW:
-            raise ValueError("const_law must be a 1D constitutive law with law_type 'SCALAR_ISOTROPIC_LAW'")
-        return v
+        if isinstance(v, ConstitutiveLaw):
+            if v.law_type != ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW:
+                raise ValueError("const_law must be a 1D constitutive law with law_type 'SCALAR_ISOTROPIC_LAW'")
+            return v
+        elif isinstance(v, NamedConstitutiveLaw):
+            return v
+        else:
+            raise TypeError("const_law must be an instance of ConstitutiveLaw or NamedConstitutiveLaw")
 
     @field_validator('integration_order')
     def validate_integration_order(cls, v):
@@ -1918,7 +1936,7 @@ class ViscousBody(Element2):
     model_config = {
         'arbitrary_types_allowed': True
     }
-    
+
     node_label: Union[int, MBVar]
     position: Optional[Position2] = None
     orientation_mat: Optional[Union[Position2, list]] = None
@@ -6001,6 +6019,7 @@ DeformableHinge2.model_rebuild()
 Rod2.model_rebuild()
 RodWithOffset.model_rebuild()
 RodBezier.model_rebuild()
+ViscousBody.model_rebuild()
 
 class FileDriver(MBEntity):
     """
