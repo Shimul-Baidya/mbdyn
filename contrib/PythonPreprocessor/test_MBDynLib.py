@@ -2864,6 +2864,1366 @@ class TestPlaneDisplacementPin(unittest.TestCase):
     #     )
     #     self.assertEqual(plane_displacement_pin.node_label, node_var)
 
+class TestPrismatic(unittest.TestCase):
+    def setUp(self):
+        # Common variables used in tests
+        self.idx = 30
+        self.node_1_label = 1
+        self.node_2_label = 2
+        self.relative_orientation_mat_1 = l.Position2(relative_position=[1.0, 0.0, 0.0], reference='other node')
+        self.relative_orientation_mat_2 = l.Position2(relative_position=[0.0, 1.0, 0.0], reference='other node')
+
+    def test_prismatic_creation_valid(self):
+        # Test creating a Prismatic instance with all valid data
+        prismatic = l.Prismatic(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            relative_orientation_mat_1=self.relative_orientation_mat_1,
+            node_2_label=self.node_2_label,
+            relative_orientation_mat_2=self.relative_orientation_mat_2
+        )
+        self.assertIsInstance(prismatic, l.Prismatic)
+        self.assertEqual(prismatic.node_1_label, self.node_1_label)
+        self.assertEqual(prismatic.relative_orientation_mat_1, self.relative_orientation_mat_1)
+        self.assertEqual(prismatic.node_2_label, self.node_2_label)
+        self.assertEqual(prismatic.relative_orientation_mat_2, self.relative_orientation_mat_2)
+
+    def test_prismatic_creation_without_optional_fields(self):
+        # Test creating a Prismatic instance without optional orientation matrices
+        prismatic = l.Prismatic(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            node_2_label=self.node_2_label
+        )
+        self.assertIsInstance(prismatic, l.Prismatic)
+        self.assertIsNone(prismatic.relative_orientation_mat_1)
+        self.assertIsNone(prismatic.relative_orientation_mat_2)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_prismatic_missing_required_fields(self):
+        # Missing node_1_label
+        with self.assertRaises(Exception):
+            l.Prismatic(
+                idx=self.idx,
+                node_2_label=self.node_2_label
+            )
+        # Missing node_2_label
+        with self.assertRaises(Exception):
+            l.Prismatic(
+                idx=self.idx,
+                node_1_label=self.node_1_label
+            )
+
+    def test_prismatic_str_method(self):
+        # Test the __str__ method of Prismatic
+        prismatic = l.Prismatic(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            relative_orientation_mat_1=self.relative_orientation_mat_1,
+            node_2_label=self.node_2_label,
+            relative_orientation_mat_2=self.relative_orientation_mat_2
+        )
+        expected_str = (
+            f'{prismatic.element_header()}, prismatic'
+            f',\n\t{self.node_1_label}, orientation, {self.relative_orientation_mat_1}'
+            f',\n\t{self.node_2_label}, orientation, {self.relative_orientation_mat_2}'
+            f'{prismatic.element_footer()}'
+        )
+        self.assertEqual(str(prismatic), expected_str)
+
+    def test_prismatic_output_option(self):
+        # Test setting the output option to 'no'
+        prismatic = l.Prismatic(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            node_2_label=self.node_2_label,
+            output='no'
+        )
+        self.assertEqual(prismatic.output, 'no')
+        self.assertIn(',\n\toutput, no', str(prismatic))
+
+    # # TODO: Test if MBVar class has any errors 
+    # def test_prismatic_with_mbvar_node_labels(self):
+    #     # Test creating a Prismatic instance with MBVar as node labels
+    #     node_var_1 = l.MBVar(name='node_var_1', var_type='integer', expression=100)
+    #     node_var_2 = l.MBVar(name='node_var_2', var_type='integer', expression=200)
+    #     prismatic = l.Prismatic(
+    #         idx=self.idx,
+    #         node_1_label=node_var_1,
+    #         node_2_label=node_var_2
+    #     )
+    #     self.assertEqual(prismatic.node_1_label, node_var_1)
+    #     self.assertEqual(prismatic.node_2_label, node_var_2)
+
+class TestRevoluteHinge(unittest.TestCase):
+    def setUp(self):
+        # Common variables used in tests
+        self.idx = 10
+        self.node_1_label = 1
+        self.node_2_label = 2
+        self.position_1 = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='node')
+        self.position_2 = l.Position2(relative_position=[1.0, 1.0, 1.0], reference='node')
+        self.orientation_mat_1 = l.Position2(relative_position=[1.0, 0.0, 0.0], reference='other node')
+        self.orientation_mat_2 = l.Position2(relative_position=[0.0, 1.0, 0.0], reference='other node')
+        self.initial_theta = 0.0
+        self.friction = 0.5
+        self.preload = 100.0
+        self.friction_model = 'coulomb'
+        self.shape_function = 'linear'
+
+    def test_revolute_hinge_creation_valid(self):
+        # Test creating a RevoluteHinge instance with all valid data, including friction parameters
+        revolute_hinge = l.RevoluteHinge(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            position_1=self.position_1,
+            orientation_mat_1=self.orientation_mat_1,
+            node_2_label=self.node_2_label,
+            position_2=self.position_2,
+            orientation_mat_2=self.orientation_mat_2,
+            initial_theta=self.initial_theta,
+            friction=self.friction,
+            preload=self.preload,
+            friction_model=self.friction_model,
+            shape_function=self.shape_function
+        )
+        self.assertIsInstance(revolute_hinge, l.RevoluteHinge)
+        self.assertEqual(revolute_hinge.node_1_label, self.node_1_label)
+        self.assertEqual(revolute_hinge.position_1, self.position_1)
+        self.assertEqual(revolute_hinge.orientation_mat_1, self.orientation_mat_1)
+        self.assertEqual(revolute_hinge.node_2_label, self.node_2_label)
+        self.assertEqual(revolute_hinge.position_2, self.position_2)
+        self.assertEqual(revolute_hinge.orientation_mat_2, self.orientation_mat_2)
+        self.assertEqual(revolute_hinge.initial_theta, self.initial_theta)
+        self.assertEqual(revolute_hinge.friction, self.friction)
+        self.assertEqual(revolute_hinge.preload, self.preload)
+        self.assertEqual(revolute_hinge.friction_model, self.friction_model)
+        self.assertEqual(revolute_hinge.shape_function, self.shape_function)
+
+    def test_revolute_hinge_creation_without_optional_fields(self):
+        # Test creating a RevoluteHinge instance without optional fields
+        revolute_hinge = l.RevoluteHinge(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            position_1=self.position_1,
+            node_2_label=self.node_2_label,
+            position_2=self.position_2
+        )
+        self.assertIsInstance(revolute_hinge, l.RevoluteHinge)
+        self.assertIsNone(revolute_hinge.orientation_mat_1)
+        self.assertIsNone(revolute_hinge.orientation_mat_2)
+        self.assertIsNone(revolute_hinge.initial_theta)
+        self.assertIsNone(revolute_hinge.friction)
+        self.assertIsNone(revolute_hinge.preload)
+        self.assertIsNone(revolute_hinge.friction_model)
+        self.assertIsNone(revolute_hinge.shape_function)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_revolute_hinge_missing_required_fields(self):
+        # Missing position_1
+        with self.assertRaises(Exception):
+            l.RevoluteHinge(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                node_2_label=self.node_2_label,
+                position_2=self.position_2
+            )
+        # Missing position_2
+        with self.assertRaises(Exception):
+            l.RevoluteHinge(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                position_1=self.position_1,
+                node_2_label=self.node_2_label
+            )
+
+    def test_revolute_hinge_str_method(self):
+        # Test the __str__ method of RevoluteHinge
+        revolute_hinge = l.RevoluteHinge(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            position_1=self.position_1,
+            orientation_mat_1=self.orientation_mat_1,
+            node_2_label=self.node_2_label,
+            position_2=self.position_2,
+            orientation_mat_2=self.orientation_mat_2,
+            initial_theta=self.initial_theta,
+            friction=self.friction,
+            preload=self.preload,
+            friction_model=self.friction_model,
+            shape_function=self.shape_function
+        )
+        expected_str = (
+            f'{revolute_hinge.element_header()}, revolute hinge'
+            f',\n\t{self.node_1_label}'
+            f',\n\t\tposition, {self.position_1}'
+            f',\n\t\torientation, {self.orientation_mat_1}'
+            f',\n\t{self.node_2_label}'
+            f',\n\t\tposition, {self.position_2}'
+            f',\n\t\torientation, {self.orientation_mat_2}'
+            f',\n\tinitial theta, {self.initial_theta}'
+            f',\n\tfriction, {self.friction}'
+            f',\n\t\tpreload, {self.preload}'
+            f',\n\t\t{self.friction_model}'
+            f',\n\t\t{self.shape_function}'
+            f'{revolute_hinge.element_footer()}'
+        )
+        self.assertEqual(str(revolute_hinge), expected_str)
+
+    def test_revolute_hinge_output_option(self):
+        # Test setting the output option to 'no'
+        revolute_hinge = l.RevoluteHinge(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            position_1=self.position_1,
+            node_2_label=self.node_2_label,
+            position_2=self.position_2,
+            output='no'
+        )
+        self.assertEqual(revolute_hinge.output, 'no')
+        self.assertIn(',\n\toutput, no', str(revolute_hinge))
+
+    # TODO: Check if MBVar class has any errors
+    # def test_revolute_hinge_with_mbvar_node_labels(self):
+    #     # Test creating a RevoluteHinge instance with MBVar as node labels
+    #     node_var_1 = l.MBVar(name='node_var_1', var_type='integer', expression=100)
+    #     node_var_2 = l.MBVar(name='node_var_2', var_type='integer', expression=200)
+    #     revolute_hinge = l.RevoluteHinge(
+    #         idx=self.idx,
+    #         node_1_label=node_var_1,
+    #         position_1=self.position_1,
+    #         node_2_label=node_var_2,
+    #         position_2=self.position_2
+    #     )
+    #     self.assertEqual(revolute_hinge.node_1_label, node_var_1)
+    #     self.assertEqual(revolute_hinge.node_2_label, node_var_2)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_revolute_hinge_friction_validation(self):
+        # Test that friction parameters are validated correctly
+        # Case when friction is specified without friction_model or shape_function
+        with self.assertRaises(Exception):
+            l.RevoluteHinge(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                position_1=self.position_1,
+                node_2_label=self.node_2_label,
+                position_2=self.position_2,
+                friction=self.friction
+            )
+        # Case when friction_model and shape_function are specified without friction
+        with self.assertRaises(Exception):
+            l.RevoluteHinge(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                position_1=self.position_1,
+                node_2_label=self.node_2_label,
+                position_2=self.position_2,
+                friction_model=self.friction_model,
+                shape_function=self.shape_function
+            )
+        # Valid case when friction is not specified and friction-related parameters are not specified
+        try:
+            revolute_hinge = l.RevoluteHinge(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                position_1=self.position_1,
+                node_2_label=self.node_2_label,
+                position_2=self.position_2
+            )
+            self.assertIsNone(revolute_hinge.friction)
+            self.assertIsNone(revolute_hinge.preload)
+            self.assertIsNone(revolute_hinge.friction_model)
+            self.assertIsNone(revolute_hinge.shape_function)
+        except Exception as e:
+            self.fail(f"Unexpected exception occurred: {e}")
+
+    def test_revolute_hinge_initial_theta(self):
+        # Test setting initial_theta
+        revolute_hinge = l.RevoluteHinge(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            position_1=self.position_1,
+            node_2_label=self.node_2_label,
+            position_2=self.position_2,
+            initial_theta=self.initial_theta
+        )
+        self.assertEqual(revolute_hinge.initial_theta, self.initial_theta)
+        self.assertIn(f',\n\tinitial theta, {self.initial_theta}', str(revolute_hinge))
+
+class TestRevolutePin(unittest.TestCase):
+    def setUp(self):
+        # Common variables used in tests
+        self.idx = 20
+        self.node_label = 1
+        self.relative_offset = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='node')
+        self.relative_orientation_mat = l.Position2(relative_position=[1.0, 0.0, 0.0], reference='other node')
+        self.absolute_pin_position = l.Position2(relative_position=[1.0, 1.0, 1.0], reference='global')
+        self.absolute_pin_orientation_mat = l.Position2(relative_position=[0.0, 1.0, 0.0], reference='global')
+        self.initial_theta = 0.0
+
+    def test_revolute_pin_creation_valid(self):
+        # Test creating a RevolutePin instance with all valid data
+        revolute_pin = l.RevolutePin(
+            idx=self.idx,
+            node_label=self.node_label,
+            relative_offset=self.relative_offset,
+            relative_orientation_mat=self.relative_orientation_mat,
+            absolute_pin_position=self.absolute_pin_position,
+            absolute_pin_orientation_mat=self.absolute_pin_orientation_mat,
+            initial_theta=self.initial_theta
+        )
+        self.assertIsInstance(revolute_pin, l.RevolutePin)
+        self.assertEqual(revolute_pin.node_label, self.node_label)
+        self.assertEqual(revolute_pin.relative_offset, self.relative_offset)
+        self.assertEqual(revolute_pin.relative_orientation_mat, self.relative_orientation_mat)
+        self.assertEqual(revolute_pin.absolute_pin_position, self.absolute_pin_position)
+        self.assertEqual(revolute_pin.absolute_pin_orientation_mat, self.absolute_pin_orientation_mat)
+        self.assertEqual(revolute_pin.initial_theta, self.initial_theta)
+
+    def test_revolute_pin_creation_without_optional_fields(self):
+        # Test creating a RevolutePin instance without optional fields
+        revolute_pin = l.RevolutePin(
+            idx=self.idx,
+            node_label=self.node_label,
+            relative_offset=self.relative_offset,
+            absolute_pin_position=self.absolute_pin_position
+        )
+        self.assertIsInstance(revolute_pin, l.RevolutePin)
+        self.assertIsNone(revolute_pin.relative_orientation_mat)
+        self.assertIsNone(revolute_pin.absolute_pin_orientation_mat)
+        self.assertIsNone(revolute_pin.initial_theta)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_revolute_pin_missing_required_fields(self):
+        # Missing relative_offset
+        with self.assertRaises(Exception):
+            l.RevolutePin(
+                idx=self.idx,
+                node_label=self.node_label,
+                absolute_pin_position=self.absolute_pin_position
+            )
+        # Missing absolute_pin_position
+        with self.assertRaises(Exception):
+            l.RevolutePin(
+                idx=self.idx,
+                node_label=self.node_label,
+                relative_offset=self.relative_offset
+            )
+        # Missing node_label
+        with self.assertRaises(Exception):
+            l.RevolutePin(
+                idx=self.idx,
+                relative_offset=self.relative_offset,
+                absolute_pin_position=self.absolute_pin_position
+            )
+
+    def test_revolute_pin_str_method(self):
+        # Test the __str__ method of RevolutePin
+        revolute_pin = l.RevolutePin(
+            idx=self.idx,
+            node_label=self.node_label,
+            relative_offset=self.relative_offset,
+            relative_orientation_mat=self.relative_orientation_mat,
+            absolute_pin_position=self.absolute_pin_position,
+            absolute_pin_orientation_mat=self.absolute_pin_orientation_mat,
+            initial_theta=self.initial_theta
+        )
+        expected_str = (
+            f'{revolute_pin.element_header()}, revolute pin'
+            f',\n\t{self.node_label}'
+            f',\n\t\tposition, {self.relative_offset}'
+            f',\n\t\torientation, {self.relative_orientation_mat}'
+            f',\n\tposition, {self.absolute_pin_position}'
+            f',\n\torientation, {self.absolute_pin_orientation_mat}'
+            f',\n\tinitial theta, {self.initial_theta}'
+            f'{revolute_pin.element_footer()}'
+        )
+        self.assertEqual(str(revolute_pin), expected_str)
+
+    # # TODO: Check if MBVar class has errors
+    # def test_revolute_pin_with_mbvar_node_label(self):
+    #     # Test creating a RevolutePin instance with MBVar as node label
+    #     node_var = l.MBVar(name='node_var', var_type='integer', expression=100)
+    #     revolute_pin = l.RevolutePin(
+    #         idx=self.idx,
+    #         node_label=node_var,
+    #         relative_offset=self.relative_offset,
+    #         absolute_pin_position=self.absolute_pin_position
+    #     )
+    #     self.assertEqual(revolute_pin.node_label, node_var)
+
+    def test_revolute_pin_initial_theta(self):
+        # Test setting initial_theta
+        revolute_pin = l.RevolutePin(
+            idx=self.idx,
+            node_label=self.node_label,
+            relative_offset=self.relative_offset,
+            absolute_pin_position=self.absolute_pin_position,
+            initial_theta=self.initial_theta
+        )
+        self.assertEqual(revolute_pin.initial_theta, self.initial_theta)
+        self.assertIn(f',\n\tinitial theta, {self.initial_theta}', str(revolute_pin))
+
+class TestRevoluteRotation(unittest.TestCase):
+    def setUp(self):
+        # Common variables used in tests
+        self.idx = 40
+        self.node_1_label = 1
+        self.node_2_label = 2
+        self.position_1 = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='node')
+        self.position_2 = l.Position2(relative_position=[1.0, 1.0, 1.0], reference='node')
+        self.orientation_mat_1 = l.Position2(relative_position=[1.0, 0.0, 0.0], reference='global')
+        self.orientation_mat_2 = l.Position2(relative_position=[0.0, 1.0, 0.0], reference='global')
+
+    def test_revolute_rotation_creation_valid(self):
+        # Test creating a RevoluteRotation instance with all valid data
+        revolute_rotation = l.RevoluteRotation(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            position_1=self.position_1,
+            orientation_mat_1=self.orientation_mat_1,
+            node_2_label=self.node_2_label,
+            position_2=self.position_2,
+            orientation_mat_2=self.orientation_mat_2
+        )
+        self.assertIsInstance(revolute_rotation, l.RevoluteRotation)
+        self.assertEqual(revolute_rotation.node_1_label, self.node_1_label)
+        self.assertEqual(revolute_rotation.position_1, self.position_1)
+        self.assertEqual(revolute_rotation.orientation_mat_1, self.orientation_mat_1)
+        self.assertEqual(revolute_rotation.node_2_label, self.node_2_label)
+        self.assertEqual(revolute_rotation.position_2, self.position_2)
+        self.assertEqual(revolute_rotation.orientation_mat_2, self.orientation_mat_2)
+
+    def test_revolute_rotation_creation_without_optional_fields(self):
+        # Test creating a RevoluteRotation instance without optional fields
+        revolute_rotation = l.RevoluteRotation(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            node_2_label=self.node_2_label
+        )
+        self.assertIsInstance(revolute_rotation, l.RevoluteRotation)
+        self.assertIsNone(revolute_rotation.position_1)
+        self.assertIsNone(revolute_rotation.orientation_mat_1)
+        self.assertIsNone(revolute_rotation.position_2)
+        self.assertIsNone(revolute_rotation.orientation_mat_2)
+
+    @unittest.skipIf(pydantic is None, "Depends on Pydantic library")
+    def test_revolute_rotation_missing_required_fields(self):
+        # Missing node_1_label
+        with self.assertRaises(Exception):
+            l.RevoluteRotation(
+                idx=self.idx,
+                node_2_label=self.node_2_label
+            )
+        # Missing node_2_label
+        with self.assertRaises(Exception):
+            l.RevoluteRotation(
+                idx=self.idx,
+                node_1_label=self.node_1_label
+            )
+
+    def test_revolute_rotation_str_method(self):
+        # Test the __str__ method of RevoluteRotation
+        revolute_rotation = l.RevoluteRotation(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            position_1=self.position_1,
+            orientation_mat_1=self.orientation_mat_1,
+            node_2_label=self.node_2_label,
+            position_2=self.position_2,
+            orientation_mat_2=self.orientation_mat_2
+        )
+        expected_str = (
+            f'{revolute_rotation.element_header()}, revolute rotation'
+            f',\n\t{self.node_1_label}'
+            f',\n\t\tposition, {self.position_1}'
+            f',\n\t\torientation, {self.orientation_mat_1}'
+            f',\n\t{self.node_2_label}'
+            f',\n\t\tposition, {self.position_2}'
+            f',\n\t\torientation, {self.orientation_mat_2}'
+            f'{revolute_rotation.element_footer()}'
+        )
+        self.assertEqual(str(revolute_rotation), expected_str)
+
+    # # TODO: Check if MBVar class has errors
+    # def test_revolute_rotation_with_mbvar_node_labels(self):
+    #     # Test creating a RevoluteRotation instance with MBVar as node labels
+    #     node_var_1 = l.MBVar(name='node_var_1', var_type='integer', expression=100)
+    #     node_var_2 = l.MBVar(name='node_var_2', var_type='integer', expression=200)
+    #     revolute_rotation = l.RevoluteRotation(
+    #         idx=self.idx,
+    #         node_1_label=node_var_1,
+    #         node_2_label=node_var_2
+    #     )
+    #     self.assertEqual(revolute_rotation.node_1_label, node_var_1)
+    #     self.assertEqual(revolute_rotation.node_2_label, node_var_2)
+
+    def test_revolute_rotation_optional_positions(self):
+        # Test setting only position_1 and position_2
+        revolute_rotation = l.RevoluteRotation(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            position_1=self.position_1,
+            node_2_label=self.node_2_label,
+            position_2=self.position_2
+        )
+        self.assertEqual(revolute_rotation.position_1, self.position_1)
+        self.assertIsNone(revolute_rotation.orientation_mat_1)
+        self.assertEqual(revolute_rotation.position_2, self.position_2)
+        self.assertIsNone(revolute_rotation.orientation_mat_2)
+        # Check string representation
+        expected_str = (
+            f'{revolute_rotation.element_header()}, revolute rotation'
+            f',\n\t{self.node_1_label}'
+            f',\n\t\tposition, {self.position_1}'
+            f',\n\t{self.node_2_label}'
+            f',\n\t\tposition, {self.position_2}'
+            f'{revolute_rotation.element_footer()}'
+        )
+        self.assertEqual(str(revolute_rotation), expected_str)
+
+    def test_revolute_rotation_optional_orientations(self):
+        # Test setting only orientation_mat_1 and orientation_mat_2
+        revolute_rotation = l.RevoluteRotation(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            orientation_mat_1=self.orientation_mat_1,
+            node_2_label=self.node_2_label,
+            orientation_mat_2=self.orientation_mat_2
+        )
+        self.assertIsNone(revolute_rotation.position_1)
+        self.assertEqual(revolute_rotation.orientation_mat_1, self.orientation_mat_1)
+        self.assertIsNone(revolute_rotation.position_2)
+        self.assertEqual(revolute_rotation.orientation_mat_2, self.orientation_mat_2)
+        # Check string representation
+        expected_str = (
+            f'{revolute_rotation.element_header()}, revolute rotation'
+            f',\n\t{self.node_1_label}'
+            f',\n\t\torientation, {self.orientation_mat_1}'
+            f',\n\t{self.node_2_label}'
+            f',\n\t\torientation, {self.orientation_mat_2}'
+            f'{revolute_rotation.element_footer()}'
+        )
+        self.assertEqual(str(revolute_rotation), expected_str)
+
+    def test_revolute_rotation_output_option(self):
+        # Test setting the output option to 'no'
+        revolute_rotation = l.RevoluteRotation(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            node_2_label=self.node_2_label,
+            output='no'
+        )
+        self.assertEqual(revolute_rotation.output, 'no')
+        self.assertIn(',\n\toutput, no', str(revolute_rotation))
+
+class TestRod2(unittest.TestCase):
+    def setUp(self):
+        # Common variables used in tests
+        self.idx = 50
+        self.node_1_label = 1
+        self.node_2_label = 2
+        self.position_1 = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='node')
+        self.position_2 = l.Position2(relative_position=[1.0, 1.0, 1.0], reference='node')
+        self.rod_length = 10.0
+        self.const_law_valid = l.LinearElastic(
+            law_type=l.ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW,
+            stiffness=1e6
+        )
+        self.const_law_invalid = l.LinearElastic(
+            law_type=l.ConstitutiveLaw.LawType.D3_ISOTROPIC_LAW,
+            stiffness=1e6
+        )
+
+    def test_rod2_creation_valid(self):
+        # Test creating a Rod2 instance with all valid data
+        rod2 = l.Rod2(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            position_1=self.position_1,
+            node_2_label=self.node_2_label,
+            position_2=self.position_2,
+            rod_length=self.rod_length,
+            const_law=self.const_law_valid
+        )
+        self.assertIsInstance(rod2, l.Rod2)
+        self.assertEqual(rod2.node_1_label, self.node_1_label)
+        self.assertEqual(rod2.position_1, self.position_1)
+        self.assertEqual(rod2.node_2_label, self.node_2_label)
+        self.assertEqual(rod2.position_2, self.position_2)
+        self.assertEqual(rod2.rod_length, self.rod_length)
+        self.assertEqual(rod2.const_law, self.const_law_valid)
+
+    def test_rod2_creation_without_optional_fields(self):
+        # Test creating a Rod2 instance without optional position fields
+        rod2 = l.Rod2(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            node_2_label=self.node_2_label,
+            rod_length='from nodes',
+            const_law=self.const_law_valid
+        )
+        self.assertIsInstance(rod2, l.Rod2)
+        self.assertIsNone(rod2.position_1)
+        self.assertIsNone(rod2.position_2)
+        self.assertEqual(rod2.rod_length, 'from nodes')
+
+    @unittest.skipIf(pydantic is None, "Depends on Pydantic library")
+    def test_rod2_missing_required_fields(self):
+        # Missing node_1_label
+        with self.assertRaises(Exception):
+            l.Rod2(
+                idx=self.idx,
+                node_2_label=self.node_2_label,
+                rod_length=self.rod_length,
+                const_law=self.const_law_valid
+            )
+        # Missing node_2_label
+        with self.assertRaises(Exception):
+            l.Rod2(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                rod_length=self.rod_length,
+                const_law=self.const_law_valid
+            )
+        # Missing rod_length
+        with self.assertRaises(Exception):
+            l.Rod2(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                node_2_label=self.node_2_label,
+                const_law=self.const_law_valid
+            )
+        # Missing const_law
+        with self.assertRaises(Exception):
+            l.Rod2(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                node_2_label=self.node_2_label,
+                rod_length=self.rod_length
+            )
+
+    def test_rod2_str_method(self):
+        # Test the __str__ method of Rod2
+        rod2 = l.Rod2(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            position_1=self.position_1,
+            node_2_label=self.node_2_label,
+            position_2=self.position_2,
+            rod_length=self.rod_length,
+            const_law=self.const_law_valid
+        )
+        expected_str = (
+            f'{rod2.element_header()}, rod'
+            f',\n\t{self.node_1_label}'
+            f',\n\t\tposition, {self.position_1}'
+            f',\n\t{self.node_2_label}'
+            f',\n\t\tposition, {self.position_2}'
+            f',\n\t{self.rod_length}'
+            f',\n\t{self.const_law_valid}'
+            f'{rod2.element_footer()}'
+        )
+        self.maxDiff=None
+        self.assertEqual(str(rod2), expected_str)
+
+    def test_rod2_output_option(self):
+        # Test setting the output option to 'no'
+        rod2 = l.Rod2(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            node_2_label=self.node_2_label,
+            rod_length='from nodes',
+            const_law=self.const_law_valid,
+            output='no'
+        )
+        self.assertEqual(rod2.output, 'no')
+        self.assertIn(',\n\toutput, no', str(rod2))
+
+    # # TODO: Check if MBVar class has errors
+    # def test_rod2_with_mbvar_node_labels(self):
+    #     # Test creating a Rod2 instance with MBVar as node labels
+    #     node_var_1 = l.MBVar(name='node_var_1', var_type='integer', expression=100)
+    #     node_var_2 = l.MBVar(name='node_var_2', var_type='integer', expression=200)
+    #     rod2 = l.Rod2(
+    #         idx=self.idx,
+    #         node_1_label=node_var_1,
+    #         node_2_label=node_var_2,
+    #         rod_length=self.rod_length,
+    #         const_law=self.const_law_valid
+    #     )
+    #     self.assertEqual(rod2.node_1_label, node_var_1)
+    #     self.assertEqual(rod2.node_2_label, node_var_2)
+
+    def test_rod2_rod_length_validation(self):
+        # Test the rod_length field validator
+        # Valid cases
+        try:
+            rod2_float_length = l.Rod2(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                node_2_label=self.node_2_label,
+                rod_length=15.0,
+                const_law=self.const_law_valid
+            )
+            self.assertEqual(rod2_float_length.rod_length, 15.0)
+            rod2_str_length = l.Rod2(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                node_2_label=self.node_2_label,
+                rod_length='from nodes',
+                const_law=self.const_law_valid
+            )
+            self.assertEqual(rod2_str_length.rod_length, 'from nodes')
+            # TODO: Check if MBVar class has errors
+            # rod2_mbvar_length = l.Rod2(
+            #     idx=self.idx,
+            #     node_1_label=self.node_1_label,
+            #     node_2_label=self.node_2_label,
+            #     rod_length=l.MBVar(name='rod_length_var', var_type='real', expression=20.0),
+            #     const_law=self.const_law_valid
+            # )
+            # self.assertIsInstance(rod2_mbvar_length.rod_length, l.MBVar)
+        except Exception as e:
+            self.fail(f"Unexpected exception occurred: {e}")
+        # Invalid case
+        if pydantic is None:
+            self.skipTest("Pydantic not available, skipping invalid input test")
+        else:
+            with self.assertRaises(Exception):
+                l.Rod2(
+                    idx=self.idx,
+                    node_1_label=self.node_1_label,
+                    node_2_label=self.node_2_label,
+                    rod_length='invalid string',
+                    const_law=self.const_law_valid
+                )
+
+    def test_rod2_const_law_validation(self):
+        # Test the const_law field validator
+        # Valid case
+        try:
+            rod2 = l.Rod2(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                node_2_label=self.node_2_label,
+                rod_length=self.rod_length,
+                const_law=self.const_law_valid
+            )
+            self.assertEqual(rod2.const_law, self.const_law_valid)
+        except Exception as e:
+            self.fail(f"Unexpected exception occurred: {e}")
+        if pydantic is None:
+            self.skipTest("Pydantic not available, skipping invalid input test")
+        else:
+            # Invalid case: const_law is not a ConstitutiveLaw instance
+            with self.assertRaises(Exception):
+                l.Rod2(
+                    idx=self.idx,
+                    node_1_label=self.node_1_label,
+                    node_2_label=self.node_2_label,
+                    rod_length=self.rod_length,
+                    const_law='invalid_const_law'
+                )
+            # Invalid case: const_law with wrong law_type
+            with self.assertRaises(Exception):
+                l.Rod2(
+                    idx=self.idx,
+                    node_1_label=self.node_1_label,
+                    node_2_label=self.node_2_label,
+                    rod_length=self.rod_length,
+                    const_law=self.const_law_invalid
+                )
+
+class TestRodWithOffset(unittest.TestCase):
+    def setUp(self):
+        # Common variables used in tests
+        self.idx = 60
+        self.node_1_label = 1
+        self.node_2_label = 2
+        self.position_1 = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='node')
+        self.position_2 = l.Position2(relative_position=[1.0, 1.0, 1.0], reference='node')
+        self.rod_length = 10.0
+        self.const_law_valid = l.LinearElastic(
+            law_type=l.ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW,
+            stiffness=1e6
+        )
+        self.const_law_invalid = l.LinearElastic(
+            law_type=l.ConstitutiveLaw.LawType.D3_ISOTROPIC_LAW,
+            stiffness=1e6
+        )
+
+    def test_rod_with_offset_creation_valid(self):
+        # Test creating a RodWithOffset instance with all valid data
+        rod_with_offset = l.RodWithOffset(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            position_1=self.position_1,
+            node_2_label=self.node_2_label,
+            position_2=self.position_2,
+            rod_length=self.rod_length,
+            const_law=self.const_law_valid
+        )
+        self.assertIsInstance(rod_with_offset, l.RodWithOffset)
+        self.assertEqual(rod_with_offset.node_1_label, self.node_1_label)
+        self.assertEqual(rod_with_offset.position_1, self.position_1)
+        self.assertEqual(rod_with_offset.node_2_label, self.node_2_label)
+        self.assertEqual(rod_with_offset.position_2, self.position_2)
+        self.assertEqual(rod_with_offset.rod_length, self.rod_length)
+        self.assertEqual(rod_with_offset.const_law, self.const_law_valid)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_rod_with_offset_missing_required_fields(self):
+        # Missing position_1
+        with self.assertRaises(Exception):
+            l.RodWithOffset(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                node_2_label=self.node_2_label,
+                position_2=self.position_2,
+                rod_length=self.rod_length,
+                const_law=self.const_law_valid
+            )
+        # Missing position_2
+        with self.assertRaises(Exception):
+            l.RodWithOffset(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                position_1=self.position_1,
+                node_2_label=self.node_2_label,
+                rod_length=self.rod_length,
+                const_law=self.const_law_valid
+            )
+        # Missing node_1_label
+        with self.assertRaises(Exception):
+            l.RodWithOffset(
+                idx=self.idx,
+                position_1=self.position_1,
+                node_2_label=self.node_2_label,
+                position_2=self.position_2,
+                rod_length=self.rod_length,
+                const_law=self.const_law_valid
+            )
+        # Missing node_2_label
+        with self.assertRaises(Exception):
+            l.RodWithOffset(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                position_1=self.position_1,
+                position_2=self.position_2,
+                rod_length=self.rod_length,
+                const_law=self.const_law_valid
+            )
+        # Missing rod_length
+        with self.assertRaises(Exception):
+            l.RodWithOffset(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                position_1=self.position_1,
+                node_2_label=self.node_2_label,
+                position_2=self.position_2,
+                const_law=self.const_law_valid
+            )
+        # Missing const_law
+        with self.assertRaises(Exception):
+            l.RodWithOffset(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                position_1=self.position_1,
+                node_2_label=self.node_2_label,
+                position_2=self.position_2,
+                rod_length=self.rod_length
+            )
+
+    def test_rod_with_offset_str_method(self):
+        # Test the __str__ method of RodWithOffset
+        rod_with_offset = l.RodWithOffset(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            position_1=self.position_1,
+            node_2_label=self.node_2_label,
+            position_2=self.position_2,
+            rod_length=self.rod_length,
+            const_law=self.const_law_valid
+        )
+        expected_str = (
+            f'{rod_with_offset.element_header()}, rod with offset'
+            f',\n\t{self.node_1_label}'
+            f',\n\t\t{self.position_1}'
+            f',\n\t{self.node_2_label}'
+            f',\n\t\t{self.position_2}'
+            f',\n\t{self.rod_length}'
+            f',\n\t{self.const_law_valid}'
+            f'{rod_with_offset.element_footer()}'
+        )
+        self.assertEqual(str(rod_with_offset), expected_str)
+
+    # # TODO: Check if MBVar class has errors
+    # def test_rod_with_offset_with_mbvar_node_labels(self):
+    #     # Test creating a RodWithOffset instance with MBVar as node labels
+    #     node_var_1 = l.MBVar(name='node_var_1', var_type='integer', expression=100)
+    #     node_var_2 = l.MBVar(name='node_var_2', var_type='integer', expression=200)
+    #     rod_with_offset = l.RodWithOffset(
+    #         idx=self.idx,
+    #         node_1_label=node_var_1,
+    #         position_1=self.position_1,
+    #         node_2_label=node_var_2,
+    #         position_2=self.position_2,
+    #         rod_length=self.rod_length,
+    #         const_law=self.const_law_valid
+    #     )
+    #     self.assertEqual(rod_with_offset.node_1_label, node_var_1)
+    #     self.assertEqual(rod_with_offset.node_2_label, node_var_2)
+    
+    def test_rod_with_offset_rod_length_validation(self):
+        # Test the rod_length field validator
+        # Valid cases
+        try:
+            rod_float_length = l.RodWithOffset(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                position_1=self.position_1,
+                node_2_label=self.node_2_label,
+                position_2=self.position_2,
+                rod_length=15.0,
+                const_law=self.const_law_valid
+            )
+            self.assertEqual(rod_float_length.rod_length, 15.0)
+            rod_str_length = l.RodWithOffset(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                position_1=self.position_1,
+                node_2_label=self.node_2_label,
+                position_2=self.position_2,
+                rod_length='from nodes',
+                const_law=self.const_law_valid
+            )
+            self.assertEqual(rod_str_length.rod_length, 'from nodes')
+            # TODO: Check if MBVar class has errors
+            # rod_mbvar_length = l.RodWithOffset(
+            #     idx=self.idx,
+            #     node_1_label=self.node_1_label,
+            #     position_1=self.position_1,
+            #     node_2_label=self.node_2_label,
+            #     position_2=self.position_2,
+            #     rod_length=l.MBVar(name='rod_length_var', var_type='real', expression=20.0),
+            #     const_law=self.const_law_valid
+            # )
+            # self.assertIsInstance(rod_mbvar_length.rod_length, l.MBVar)
+        except Exception as e:
+            self.fail(f"Unexpected exception occurred: {e}")
+        # Invalid case
+        if pydantic is None:
+            self.skipTest("Pydantic not available, skipping invalid input test")
+        else:
+            with self.assertRaises(Exception):
+                l.RodWithOffset(
+                    idx=self.idx,
+                    node_1_label=self.node_1_label,
+                    position_1=self.position_1,
+                    node_2_label=self.node_2_label,
+                    position_2=self.position_2,
+                    rod_length='invalid string',
+                    const_law=self.const_law_valid
+                )
+
+    def test_rod_with_offset_const_law_validation(self):
+        # Test the const_law field validator
+        # Valid case
+        try:
+            rod_with_offset = l.RodWithOffset(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                position_1=self.position_1,
+                node_2_label=self.node_2_label,
+                position_2=self.position_2,
+                rod_length=self.rod_length,
+                const_law=self.const_law_valid
+            )
+            self.assertEqual(rod_with_offset.const_law, self.const_law_valid)
+        except Exception as e:
+            self.fail(f"Unexpected exception occurred: {e}")
+        # Invalid case: const_law is not a ConstitutiveLaw instance
+        if pydantic is None:
+            self.skipTest("Pydantic not available, skipping invalid input test")
+        else:
+            with self.assertRaises(Exception):
+                l.RodWithOffset(
+                    idx=self.idx,
+                    node_1_label=self.node_1_label,
+                    position_1=self.position_1,
+                    node_2_label=self.node_2_label,
+                    position_2=self.position_2,
+                    rod_length=self.rod_length,
+                    const_law='invalid_const_law'
+                )
+            # Invalid case: const_law with wrong law_type
+            with self.assertRaises(Exception):
+                l.RodWithOffset(
+                    idx=self.idx,
+                    node_1_label=self.node_1_label,
+                    position_1=self.position_1,
+                    node_2_label=self.node_2_label,
+                    position_2=self.position_2,
+                    rod_length=self.rod_length,
+                    const_law=self.const_law_invalid
+                )
+
+    def test_rod_with_offset_output_option(self):
+        # Test setting the output option to 'no'
+        rod_with_offset = l.RodWithOffset(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            position_1=self.position_1,
+            node_2_label=self.node_2_label,
+            position_2=self.position_2,
+            rod_length='from nodes',
+            const_law=self.const_law_valid,
+            output='no'
+        )
+        self.assertEqual(rod_with_offset.output, 'no')
+        self.assertIn(',\n\toutput, no', str(rod_with_offset))
+
+class TestRodBezier(unittest.TestCase):
+    def setUp(self):
+        # Common variables used in tests
+        self.idx = 70
+        self.node_1_label = 1
+        self.node_2_label = 2
+        self.position_1 = l.Position2(relative_position=[0.0, 0.0, 0.0], reference='node')
+        self.position_2 = l.Position2(relative_position=[1.0, 0.0, 0.0], reference='node')
+        self.position_3 = l.Position2(relative_position=[0.0, 1.0, 0.0], reference='node')
+        self.position_4 = l.Position2(relative_position=[1.0, 1.0, 0.0], reference='node')
+        self.rod_length = 10.0
+        self.const_law_valid = l.LinearElastic(
+            law_type=l.ConstitutiveLaw.LawType.SCALAR_ISOTROPIC_LAW,
+            stiffness=1e6
+        )
+        self.const_law_invalid = l.LinearElastic(
+            law_type=l.ConstitutiveLaw.LawType.D3_ISOTROPIC_LAW,
+            stiffness=1e6
+        )
+
+    def test_rod_bezier_creation_valid(self):
+        # Test creating a RodBezier instance with all valid data
+        rod_bezier = l.RodBezier(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            position_1=self.position_1,
+            position_2=self.position_2,
+            node_2_label=self.node_2_label,
+            position_3=self.position_3,
+            position_4=self.position_4,
+            rod_length=self.rod_length,
+            const_law=self.const_law_valid,
+            integration_order=5,
+            integration_segments=4
+        )
+        self.assertIsInstance(rod_bezier, l.RodBezier)
+        self.assertEqual(rod_bezier.node_1_label, self.node_1_label)
+        self.assertEqual(rod_bezier.position_1, self.position_1)
+        self.assertEqual(rod_bezier.position_2, self.position_2)
+        self.assertEqual(rod_bezier.node_2_label, self.node_2_label)
+        self.assertEqual(rod_bezier.position_3, self.position_3)
+        self.assertEqual(rod_bezier.position_4, self.position_4)
+        self.assertEqual(rod_bezier.rod_length, self.rod_length)
+        self.assertEqual(rod_bezier.const_law, self.const_law_valid)
+        self.assertEqual(rod_bezier.integration_order, 5)
+        self.assertEqual(rod_bezier.integration_segments, 4)
+
+    def test_rod_bezier_creation_with_defaults(self):
+        # Test creating a RodBezier instance with default integration parameters
+        rod_bezier = l.RodBezier(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            position_1=self.position_1,
+            position_2=self.position_2,
+            node_2_label=self.node_2_label,
+            position_3=self.position_3,
+            position_4=self.position_4,
+            rod_length='from nodes',
+            const_law=self.const_law_valid
+        )
+        self.assertIsInstance(rod_bezier, l.RodBezier)
+        self.assertEqual(rod_bezier.integration_order, 2)
+        self.assertEqual(rod_bezier.integration_segments, 3)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_rod_bezier_missing_required_fields(self):
+        # Missing position_1
+        with self.assertRaises(Exception):
+            l.RodBezier(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                position_2=self.position_2,
+                node_2_label=self.node_2_label,
+                position_3=self.position_3,
+                position_4=self.position_4,
+                rod_length=self.rod_length,
+                const_law=self.const_law_valid
+            )
+        # Missing const_law
+        with self.assertRaises(Exception):
+            l.RodBezier(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                position_1=self.position_1,
+                position_2=self.position_2,
+                node_2_label=self.node_2_label,
+                position_3=self.position_3,
+                position_4=self.position_4,
+                rod_length=self.rod_length
+            )
+
+    def test_rod_bezier_str_method(self):
+        # Test the __str__ method of RodBezier
+        rod_bezier = l.RodBezier(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            position_1=self.position_1,
+            position_2=self.position_2,
+            node_2_label=self.node_2_label,
+            position_3=self.position_3,
+            position_4=self.position_4,
+            rod_length=self.rod_length,
+            const_law=self.const_law_valid,
+            integration_order=5,
+            integration_segments=4
+        )
+        expected_str = (
+            f'{rod_bezier.element_header()}, rod bezier'
+            f',\n\t{self.node_1_label}'
+            f',\n\t\t{self.position_1}'
+            f',\n\t\t{self.position_2}'
+            f',\n\t{self.node_2_label}'
+            f',\n\t\t{self.position_3}'
+            f',\n\t\t{self.position_4}'
+            f',\n\t{self.rod_length}'
+            f',\n\tintegration order, {rod_bezier.integration_order}'
+            f',\n\tintegration segments, {rod_bezier.integration_segments}'
+            f',\n\t{self.const_law_valid}'
+            f'{rod_bezier.element_footer()}'
+        )
+        self.assertEqual(str(rod_bezier), expected_str)
+
+    # TODO: Check if MBVar class has errors
+    # def test_rod_bezier_with_mbvar_node_labels(self):
+    #     # Test creating a RodBezier instance with MBVar as node labels
+    #     node_var_1 = l.MBVar(name='node_var_1', var_type='integer', expression=100)
+    #     node_var_2 = l.MBVar(name='node_var_2', var_type='integer', expression=200)
+    #     rod_bezier = l.RodBezier(
+    #         idx=self.idx,
+    #         node_1_label=node_var_1,
+    #         position_1=self.position_1,
+    #         position_2=self.position_2,
+    #         node_2_label=node_var_2,
+    #         position_3=self.position_3,
+    #         position_4=self.position_4,
+    #         rod_length=self.rod_length,
+    #         const_law=self.const_law_valid
+    #     )
+    #     self.assertEqual(rod_bezier.node_1_label, node_var_1)
+    #     self.assertEqual(rod_bezier.node_2_label, node_var_2)
+
+    def test_rod_bezier_rod_length_validation(self):
+        # Test the rod_length field validator
+        # Valid cases
+        try:
+            rod_float_length = l.RodBezier(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                position_1=self.position_1,
+                position_2=self.position_2,
+                node_2_label=self.node_2_label,
+                position_3=self.position_3,
+                position_4=self.position_4,
+                rod_length=15.0,
+                const_law=self.const_law_valid
+            )
+            self.assertEqual(rod_float_length.rod_length, 15.0)
+            rod_str_length = l.RodBezier(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                position_1=self.position_1,
+                position_2=self.position_2,
+                node_2_label=self.node_2_label,
+                position_3=self.position_3,
+                position_4=self.position_4,
+                rod_length='from nodes',
+                const_law=self.const_law_valid
+            )
+            self.assertEqual(rod_str_length.rod_length, 'from nodes')
+            # TODO: Check if MBVar class has errors
+            # rod_mbvar_length = l.RodBezier(
+            #     idx=self.idx,
+            #     node_1_label=self.node_1_label,
+            #     position_1=self.position_1,
+            #     position_2=self.position_2,
+            #     node_2_label=self.node_2_label,
+            #     position_3=self.position_3,
+            #     position_4=self.position_4,
+            #     rod_length=l.MBVar(name='rod_length_var', var_type='real', expression=20.0),
+            #     const_law=self.const_law_valid
+            # )
+            # self.assertIsInstance(rod_mbvar_length.rod_length, l.MBVar)
+        except Exception as e:
+            self.fail(f"Unexpected exception occurred: {e}")
+        # Invalid case
+        if pydantic is None:
+            self.skipTest("Pydantic not available, skipping invalid input test")
+        else:
+            with self.assertRaises(Exception):
+                l.RodBezier(
+                    idx=self.idx,
+                    node_1_label=self.node_1_label,
+                    position_1=self.position_1,
+                    position_2=self.position_2,
+                    node_2_label=self.node_2_label,
+                    position_3=self.position_3,
+                    position_4=self.position_4,
+                    rod_length='invalid string',
+                    const_law=self.const_law_valid
+                )
+
+    def test_rod_bezier_const_law_validation(self):
+        # Test the const_law field validator
+        # Valid case
+        try:
+            rod_bezier = l.RodBezier(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                position_1=self.position_1,
+                position_2=self.position_2,
+                node_2_label=self.node_2_label,
+                position_3=self.position_3,
+                position_4=self.position_4,
+                rod_length=self.rod_length,
+                const_law=self.const_law_valid
+            )
+            self.assertEqual(rod_bezier.const_law, self.const_law_valid)
+        except Exception as e:
+            self.fail(f"Unexpected exception occurred: {e}")
+        # Invalid case: const_law is not a ConstitutiveLaw instance
+        if pydantic is None:
+            self.skipTest("Pydantic not available, skipping invalid input test")
+        else:
+            with self.assertRaises(Exception):
+                l.RodBezier(
+                    idx=self.idx,
+                    node_1_label=self.node_1_label,
+                    position_1=self.position_1,
+                    position_2=self.position_2,
+                    node_2_label=self.node_2_label,
+                    position_3=self.position_3,
+                    position_4=self.position_4,
+                    rod_length=self.rod_length,
+                    const_law='invalid_const_law'
+                )
+            # Invalid case: const_law with wrong law_type
+            with self.assertRaises(Exception):
+                l.RodBezier(
+                    idx=self.idx,
+                    node_1_label=self.node_1_label,
+                    position_1=self.position_1,
+                    position_2=self.position_2,
+                    node_2_label=self.node_2_label,
+                    position_3=self.position_3,
+                    position_4=self.position_4,
+                    rod_length=self.rod_length,
+                    const_law=self.const_law_invalid
+                )
+
+    def test_rod_bezier_integration_order_validation(self):
+        # Test the integration_order field validator
+        # Valid case
+        try:
+            rod_bezier = l.RodBezier(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                position_1=self.position_1,
+                position_2=self.position_2,
+                node_2_label=self.node_2_label,
+                position_3=self.position_3,
+                position_4=self.position_4,
+                rod_length=self.rod_length,
+                const_law=self.const_law_valid,
+                integration_order=5
+            )
+            self.assertEqual(rod_bezier.integration_order, 5)
+        except Exception as e:
+            self.fail(f"Unexpected exception occurred: {e}")
+        # Invalid case: integration_order out of bounds
+        if pydantic is None:
+            self.skipTest("Pydantic not available, skipping invalid input test")
+        else:
+            with self.assertRaises(Exception):
+                l.RodBezier(
+                    idx=self.idx,
+                    node_1_label=self.node_1_label,
+                    position_1=self.position_1,
+                    position_2=self.position_2,
+                    node_2_label=self.node_2_label,
+                    position_3=self.position_3,
+                    position_4=self.position_4,
+                    rod_length=self.rod_length,
+                    const_law=self.const_law_valid,
+                    integration_order=11  # Invalid value
+                )
+
+    def test_rod_bezier_integration_segments_validation(self):
+        # Test the integration_segments field validator
+        # Valid case
+        try:
+            rod_bezier = l.RodBezier(
+                idx=self.idx,
+                node_1_label=self.node_1_label,
+                position_1=self.position_1,
+                position_2=self.position_2,
+                node_2_label=self.node_2_label,
+                position_3=self.position_3,
+                position_4=self.position_4,
+                rod_length=self.rod_length,
+                const_law=self.const_law_valid,
+                integration_segments=5
+            )
+            self.assertEqual(rod_bezier.integration_segments, 5)
+        except Exception as e:
+            self.fail(f"Unexpected exception occurred: {e}")
+        # Invalid case: integration_segments not positive
+        if pydantic is None:
+            self.skipTest("Pydantic not available, skipping invalid input test")
+        else:
+            with self.assertRaises(Exception):
+                l.RodBezier(
+                    idx=self.idx,
+                    node_1_label=self.node_1_label,
+                    position_1=self.position_1,
+                    position_2=self.position_2,
+                    node_2_label=self.node_2_label,
+                    position_3=self.position_3,
+                    position_4=self.position_4,
+                    rod_length=self.rod_length,
+                    const_law=self.const_law_valid,
+                    integration_segments=0  # Invalid value
+                )
+
+    def test_rod_bezier_output_option(self):
+        # Test setting the output option to 'no'
+        rod_bezier = l.RodBezier(
+            idx=self.idx,
+            node_1_label=self.node_1_label,
+            position_1=self.position_1,
+            position_2=self.position_2,
+            node_2_label=self.node_2_label,
+            position_3=self.position_3,
+            position_4=self.position_4,
+            rod_length='from nodes',
+            const_law=self.const_law_valid,
+            output='no'
+        )
+        self.assertEqual(rod_bezier.output, 'no')
+        self.assertIn(',\n\toutput, no', str(rod_bezier))
         
 if __name__ == '__main__':
     unittest.main()

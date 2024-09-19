@@ -1563,8 +1563,8 @@ class RevoluteHinge(Element2):
     initial_theta: Optional[Union[float, MBVar]] = None
     friction: Optional[Union[float, MBVar]] = None
     preload: Optional[Union[float, MBVar]] = None
-    friction_model: Optional[str] # TODO: Define FrictionModel
-    shape_function: Optional[str] # TODO: Define ShapeFunctions
+    friction_model: Optional[str] = None # TODO: Define FrictionModel
+    shape_function: Optional[str] = None # TODO: Define ShapeFunctions
 
     def element_type(self):
         return 'joint'
@@ -1663,6 +1663,7 @@ class RevoluteRotation(Element2):
         s += self.element_footer()
         return s
 
+# Rename to Rod, Delete current Rod, when review of the code is done
 class Rod2(Element2):
     '''
     The rod element represents a force between two nodes that depends on the relative position and velocity
@@ -1687,6 +1688,8 @@ class Rod2(Element2):
             if v.lower() != 'from nodes':
                 raise ValueError("rod_length must be a float, MBVar or the string 'from nodes'")
             return v.lower()
+        else:
+            return v
         
     @field_validator('const_law')
     def validate_const_law(cls, v):
@@ -1704,17 +1707,11 @@ class Rod2(Element2):
         s += f',\n\t{self.node_2_label}'
         if self.position_2 is not None:
             s += f',\n\t\tposition, {self.position_2}'
-        if isinstance(self.rod_length, str) and self.rod_length.lower() == 'from nodes':
-            s += f',\n\tfrom nodes'
-        else:
-            s += f',\n\t{self.rod_length}'
+        s += f',\n\t{self.rod_length}'
         s += f',\n\t{self.const_law}'
         s += self.element_footer()
         return s
     
-from typing import Union
-from pydantic import field_validator
-
 class RodWithOffset(Element2):
     '''
     Analogous to the rod joint with the optional offsets.
@@ -1736,6 +1733,8 @@ class RodWithOffset(Element2):
             if v.lower() != 'from nodes':
                 raise ValueError("rod_length must be a float or the string 'from nodes'")
             return v.lower()
+        else:
+            return v
 
     @field_validator('const_law')
     def validate_const_law(cls, v):
@@ -1797,6 +1796,8 @@ class RodBezier(Element2):
             if v.lower() != 'from nodes':
                 raise ValueError("rod_length must be a float or the string 'from nodes'")
             return v.lower()
+        else:
+            return v
 
     @field_validator('const_law')
     def validate_const_law(cls, v):
