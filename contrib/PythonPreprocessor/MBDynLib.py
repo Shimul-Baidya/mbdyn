@@ -1012,8 +1012,8 @@ class Brake(Element2):
     orientation_mat_2: Optional[Position2] = None
     average_radius: Union[float, MBVar]
     preload: Optional[Union[float, MBVar, int]] = None
-    friction_model: str  # TODO: Check if the check is correct
-    shape_function: str  # TODO: Check if the check is correct
+    friction_model: str  # TODO: Implement FrictionModel class
+    shape_function: str  # TODO: Implement ShapeFunction class
     normal_force: Union['DriveCaller', 'DriveCaller2']
 
     def element_type(self):
@@ -1595,7 +1595,7 @@ class RevoluteHinge(Element2):
     friction: Optional[Union[float, MBVar]] = None
     preload: Optional[Union[float, MBVar]] = None
     friction_model: Optional[str] = None # TODO: Define FrictionModel
-    shape_function: Optional[str] = None # TODO: Define ShapeFunctions
+    shape_function: Optional[str] = None # TODO: Define ShapeFunction
 
     def element_type(self):
         return 'joint'
@@ -6042,9 +6042,10 @@ class NamedConstitutiveLaw(MBEntity):
             UserWarning
         )
         if isinstance(law, list):
-            self.content = ', '.join(str(l) for l in law)
+            law = ', '.join(str(l) for l in law)
         else:
-            self.content = str(law)
+            law = str(law)
+        super().__init__(content=law)
 
     def __str__(self):
         return self.content

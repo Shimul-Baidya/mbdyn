@@ -1479,13 +1479,13 @@ class TestNamedConstitutiveLaw(unittest.TestCase):
         with self.assertWarns(UserWarning) as cm:
             law = l.NamedConstitutiveLaw("linear elastic")
         self.assertEqual(str(law), "linear elastic")
-        self.assertIn("Using a string for constitutive laws is not recommended.", str(cm.warning))
+        self.assertIn("Using a string for constitutive laws is not recommended and may be removed in the future.", str(cm.warning))
 
     def test_list_input(self):
         with self.assertWarns(UserWarning) as cm:
             law = l.NamedConstitutiveLaw(["linear elastic", "viscoelastic"])
         self.assertEqual(str(law), "linear elastic, viscoelastic")
-        self.assertIn("Using a list for constitutive laws is not recommended.", str(cm.warning))
+        self.assertIn("Using a string for constitutive laws is not recommended and may be removed in the future.", str(cm.warning))
 
 class TestDistance(unittest.TestCase):
     def setUp(self):
