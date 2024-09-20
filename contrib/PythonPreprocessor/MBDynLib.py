@@ -66,8 +66,10 @@ declared_MBVars = {}
 
 MBDynLib_simplify = True
 
+imported_pydantic = False
 try:
-    from pydantic import BaseModel, ConfigDict, Field, field_validator, FieldValidationInfo, model_validator
+    from pydantic import BaseModel, ConfigDict, field_validator, FieldValidationInfo, model_validator
+    imported_pydantic = True
     class _EntityBase(BaseModel):
         """Configuration for Entity with pydantic available"""
         model_config = ConfigDict(extra='forbid',
@@ -84,8 +86,22 @@ except ImportError:
             for key, value in kwargs.items():
                 setattr(self, key, value)
 
+    def placeholder(*args, **kwargs):
+        """Ignores all arguments"""
+        return None
+
     # HACK: This forces code analysis to always use the definition with pydantic
     exec('_EntityBase = _EntityBasePlaceholder')
+    exec('ConfigDict = placeholder')
+
+    def identity_decorator(*args, **kwargs):
+        """Ignores all decorator arguments and returns the wrapped function unchanged"""
+        def identity(func):
+            return func
+        return identity
+
+    field_validator = identity_decorator
+    model_validator = identity_decorator
 
 
 class MBEntity(_EntityBase, ABC):
@@ -534,11 +550,13 @@ class Position:
 class Position2(MBEntity):
     relative_position: Union[List[Union[float, MBVar, null, eye]], List[List[Union[float, MBVar, null, eye]]]]
     reference: Union['Reference2', Literal['global', 'node', 'other node', '']]
+
     @field_validator('relative_position', mode='before')
     def ensure_list(cls, v):
         if not isinstance(v, list):
             return [v]
         return v
+
     @field_validator('reference')
     def validate_reference(cls, v):
         if isinstance(v, str):
@@ -547,15 +565,18 @@ class Position2(MBEntity):
         elif not isinstance(v, Reference2):
             raise ValueError("reference must be either a Reference2 instance or one of the specified strings")
         return v
+
     def __str__(self):
         s = ''
         if self.reference != '':
             s = 'reference, ' + str(self.reference) + ', '
         s = s + ', '.join(str(i) for i in self.relative_position)
         return s
-    def isnull(self):
+
+    def isnull(self) -> bool:
         return (self.reference == '') and isinstance(self.relative_position[0], null)
-    def iseye(self):
+
+    def iseye(self) -> bool:
         return (self.reference == '') and isinstance(self.relative_position[0], eye)
 
 # TODO: Rename to Reference when all are moved
@@ -573,7 +594,9 @@ class Reference2(MBEntity):
         s = s + '\t' + str(self.velocity) + ',\n'
         s = s + '\t' + str(self.angular_velocity) + ';\n'
         return s
-Position2.model_rebuild()
+
+if imported_pydantic:
+    Position2.model_rebuild()
 
 class Node:
     def __init__(self, idx, pos, orient, vel, angular_vel, node_type = 'dynamic',
@@ -804,6 +827,16 @@ class Element2(MBEntity):
             s = s + f''',\n\toutput, {self.output}'''
         s = s + ';\n'
         return s
+
+    @staticmethod
+    def check_unit_vector3(value: List[Union[float, MBVar]]):
+        if not len(value) == 3:
+            raise ValueError("relative_direction must be a 3-dimensional vector")
+
+        magnitude = sum(v**2 for v in value)
+        if not (0.999 <= magnitude <= 1.001):  # Allowing some tolerance for floating-point precision
+            raise ValueError("relative_direction must be a unit vector (magnitude = 1)")
+
     
 class AngularAcceleration(Element2):
     """
@@ -814,7 +847,7 @@ class AngularAcceleration(Element2):
     }
 
     node_label: Union[int, MBVar]
-    relative_direction: List[Union[float, MBVar]] = Field(..., min_items=3, max_items=3)
+    relative_direction: List[Union[float, MBVar]]
     acceleration: Union['DriveCaller', 'DriveCaller2']
 
     def element_type(self):
@@ -822,9 +855,7 @@ class AngularAcceleration(Element2):
     
     @field_validator('relative_direction')
     def validate_relative_direction(cls, v):
-        magnitude = sum(i**2 for i in v) ** 0.5
-        if not (0.999 <= magnitude <= 1.001):  # Allowing some tolerance for floating-point precision
-            raise ValueError("relative_direction must be a unit vector (magnitude = 1)")
+        Element2.check_unit_vector3(v)
         return v
     
     def __str__(self):
@@ -843,7 +874,7 @@ class AngularVelocity(Element2):
     }
 
     node_label: Union[int, MBVar]
-    relative_direction: List[Union[float, MBVar]] = Field(..., min_items=3, max_items=3)
+    relative_direction: List[Union[float, MBVar]]
     velocity: Union['DriveCaller', 'DriveCaller2']
 
     def element_type(self):
@@ -851,9 +882,7 @@ class AngularVelocity(Element2):
 
     @field_validator('relative_direction')
     def validate_relative_direction(cls, v):
-        magnitude = sum(i**2 for i in v) ** 0.5
-        if not (0.999 <= magnitude <= 1.001):  # Allowing some tolerance for floating-point precision
-            raise ValueError("relative_direction must be a unit vector (magnitude = 1)")
+        Element2.check_unit_vector3(v)
         return v
     
     def __str__(self):
@@ -1257,10 +1286,8 @@ class GimbalRotation(Element2):
     relative_orientation_mat_1: Optional[Union[Position2, List]] = None
     node_2_label: Union[int, MBVar]
     relative_orientation_mat_2: Optional[Union[Position2, List]] = None
-    orientation_description: Optional[str] = Field(
-        None,
-        description="The type of orientation description",
-    )
+    orientation_description: Optional[str] = None
+    """The type of orientation description"""
 
     @field_validator('orientation_description')
     def check_orientation_description(cls, v):
@@ -1299,8 +1326,13 @@ class ImposedDisplacement(Element2):
     position_1: Position2
     node_2_label: Union[int, MBVar]
     position_2: Position2
-    direction: List[Union[float, MBVar]] = Field(..., min_items=3, max_items=3)
+    direction: List[Union[float, MBVar]]
     relative_position: Union['DriveCaller', 'DriveCaller2']
+
+    @field_validator('direction')
+    def validate_direction(cls, v):
+        Element2.check_unit_vector3(v)
+        return v
 
     def element_type(self):
         return 'joint'
@@ -1325,8 +1357,13 @@ class ImposedDisplacementPin(Element2):
     node_label: Union[int, MBVar]
     node_offset: Position2
     offset: Position2
-    direction: List[Union[float, MBVar]] = Field(..., min_items=3, max_items=3)
+    direction: List[Union[float, MBVar]]
     position: Union['DriveCaller', 'DriveCaller2']
+
+    @field_validator('direction')
+    def validate_direction(cls, v):
+        Element2.check_unit_vector3(v)
+        return v
 
     def element_type(self):
         return 'joint'
@@ -1377,15 +1414,13 @@ class InPlane(Element2):
     
     node_1_label: Union[int, MBVar]
     position: Optional[Position2] = None
-    relative_direction: List[Union[float, MBVar]] = Field(..., min_items=3, max_items=3)
+    relative_direction: List[Union[float, MBVar]]
     node_2_label: Union[int, MBVar]
     offset: Optional[Position2] = None
 
     @field_validator('relative_direction')
     def validate_relative_direction(cls, v):
-        magnitude = sum(i**2 for i in v) ** 0.5
-        if not (0.999 <= magnitude <= 1.001):  # Allowing some tolerance for floating-point precision
-            raise ValueError("relative_direction must be a unit vector (magnitude = 1)")
+        Element2.check_unit_vector3(v)
         return v
 
     def element_type(self):
@@ -1410,14 +1445,12 @@ class LinearAcceleration(Element2):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     
     node_label: Union[int, MBVar]
-    relative_direction: List[Union[float, MBVar]] = Field(..., min_items=3, max_items=3)
+    relative_direction: List[Union[float, MBVar]]
     acceleration: Union['DriveCaller', 'DriveCaller2']
 
     @field_validator('relative_direction')
     def validate_relative_direction(cls, v):
-        magnitude = sum(i**2 for i in v) ** 0.5
-        if not (0.999 <= magnitude <= 1.001):  # Allowing some tolerance for floating-point precision
-            raise ValueError("relative_direction must be a unit vector (magnitude = 1)")
+        Element2.check_unit_vector3(v)
         return v
 
     def element_type(self):
@@ -1441,14 +1474,12 @@ class LinearVelocity(Element2):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     
     node_label: Union[int, MBVar]
-    relative_direction: List[Union[float, MBVar]] = Field(..., min_items=3, max_items=3)
+    relative_direction: List[Union[float, MBVar]]
     velocity: Union['DriveCaller', 'DriveCaller2']
 
     @field_validator('relative_direction')
     def validate_relative_direction(cls, v):
-        magnitude = sum(i**2 for i in v) ** 0.5
-        if not (0.999 <= magnitude <= 1.001):  # Allowing some tolerance for floating-point precision
-            raise ValueError("relative_direction must be a unit vector (magnitude = 1)")
+        Element2.check_unit_vector3(v)
         return v
 
     def element_type(self):
@@ -2767,7 +2798,8 @@ class Beam(Element):
         s = s + ';\n'
         return s
     
-BeamSlider.model_rebuild()
+if imported_pydantic:
+    BeamSlider.model_rebuild()
 
 class AerodynamicBody(Element):
     def __init__(self, idx, node, 
@@ -5109,16 +5141,18 @@ class UnitDriveCaller(DriveCaller):
     
 class TplDriveCaller(DriveCaller2):
     pass
-DriveDisplacement.model_rebuild()
-DriveDisplacementPin.model_rebuild()
-DriveHinge.model_rebuild()
 
-AngularAcceleration.model_rebuild()
-AngularVelocity.model_rebuild()
-AxialRotation.model_rebuild()
-Brake.model_rebuild()
-ImposedDisplacement.model_rebuild()
-ImposedDisplacement.model_rebuild()
+if imported_pydantic:
+    DriveDisplacement.model_rebuild()
+    DriveDisplacementPin.model_rebuild()
+    DriveHinge.model_rebuild()
+
+    AngularAcceleration.model_rebuild()
+    AngularVelocity.model_rebuild()
+    AxialRotation.model_rebuild()
+    Brake.model_rebuild()
+    ImposedDisplacement.model_rebuild()
+    ImposedDisplacement.model_rebuild()
 
 
 class ConstitutiveLaw(MBEntity):
@@ -5452,7 +5486,7 @@ class LinearViscoelasticGeneric(ConstitutiveLaw):
     factor: Optional[Union[float, MBVar]] = None
 
     @model_validator(mode='before')
-    def check_viscosity_factor(cls, values: FieldValidationInfo) -> Any:
+    def check_viscosity_factor(cls, values: 'FieldValidationInfo') -> Any:
         stiffness = values.get('stiffness')
         viscosity = values.get('viscosity')
         factor = values.get('factor')
@@ -6015,12 +6049,13 @@ class NamedConstitutiveLaw(MBEntity):
     def __str__(self):
         return self.content
 
-DeformableAxial.model_rebuild()
-DeformableHinge2.model_rebuild()
-Rod2.model_rebuild()
-RodWithOffset.model_rebuild()
-RodBezier.model_rebuild()
-ViscousBody.model_rebuild()
+if imported_pydantic:
+    DeformableAxial.model_rebuild()
+    DeformableHinge2.model_rebuild()
+    Rod2.model_rebuild()
+    RodWithOffset.model_rebuild()
+    RodBezier.model_rebuild()
+    ViscousBody.model_rebuild()
 
 class FileDriver(MBEntity):
     """
