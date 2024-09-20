@@ -5989,30 +5989,31 @@ class InvariantAngularWrapper(ConstitutiveLaw):
         base_str += f',\n\t{str(self.wrapped_const_law)}'
         return base_str
     
-class NamedConstitutiveLaw:
+class NamedConstitutiveLaw(MBEntity):
     """
-    Class to encapsulate logic for handling named constitutive laws.
-    Issues a warning if the input is not a ConstitutiveLaw instance.
+    Adapter for using a constitutive law that is not yet implemented in the preprocessor
+    as a regular `ConstitutiveLaw` subclass with argument checking.
+
+    This should only be used temporarily, and may be removed in the future without prior notice.
     """
+    
+    content: str
+    """Text that will be output to MBDyn for this law"""
 
     def __init__(self, law: Union[str, list]):
-        if isinstance(law, str):
-            warnings.warn(
-                "Using a string for constitutive laws is not recommended."
-                "Consider using ConstitutiveLaw instances for better support.",
-                UserWarning
-            )
-            self.law = law
-        elif isinstance(law, list):
-            warnings.warn(
-                "Using a list for constitutive laws is not recommended."
-                "Consider using ConstitutiveLaw instances for better support.",
-                UserWarning
-            )
-            self.law = ', '.join(str(i) for i in law)
+        warnings.warn(
+            "Using a string for constitutive laws is not recommended " + \
+            "and may be removed in the future. " + \
+            "Consider using ConstitutiveLaw instances for better support.",
+            UserWarning
+        )
+        if isinstance(law, list):
+            self.content = ', '.join(str(l) for l in law)
+        else:
+            self.content = str(law)
 
     def __str__(self):
-        return self.law
+        return self.content
 
 DeformableAxial.model_rebuild()
 DeformableHinge2.model_rebuild()
