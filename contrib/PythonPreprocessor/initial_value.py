@@ -63,11 +63,11 @@ class Strategy(MBEntity):
 
 class StrategyFactor(Strategy):
     reduction_factor: Union[float, MBVar]
-    steps_before_reduction: Union[int, MBVar]
+    steps_before_reduction: Union[float, MBVar]
     raise_factor: Union[float, MBVar]
-    steps_before_raise: Union[int, MBVar]
-    min_iterations: Union[int, MBVar]
-    max_iterations: Optional[Union[int, MBVar]] = None
+    steps_before_raise: Union[float, MBVar]
+    min_iterations: Union[float, MBVar]
+    max_iterations: Optional[Union[float, MBVar]] = None
 
     def __str__(self):
         s = f'{self.strategy_header()}, {self.steps_before_reduction}'
@@ -87,6 +87,38 @@ class StrategyNoChange(Strategy):
     def __str__(self):
         s = f'{self.strategy_header()}'
         return s
+    
+class Tolerance(MBEntity):
+    residual_tolerance: Union[Literal['null'], float, MBVar]
+    residual_test: Optional[Literal['none', 'norm', 'minmax']] = None
+    scaling: Optional[str] = None
+    solution_tolerance: Optional[Union[Literal['null'], float, MBVar]] = None
+    solution_test: Optional[Literal['none', 'norm', 'minmax']] = None
+
+    @field_validator('scaling')
+    def validate_scaling(cls, v):
+        if cls.residual_test is None and v is not None:
+            raise ValueError("scaling should be None if residual_test is not provided")
+        if v.lower() != 'scale':
+            raise ValueError("scaling must be a string literal: 'scale'")
+        return v.lower()
+    
+    @field_validator('solution_test', mode='before')
+    def validate_solution_test(cls, v):
+        if cls.solution_tolerance is None and v is not None:
+            raise ValueError("solution_test should be None if solution_tolerance is not provided")
+        return v
+
+    def __str__(self):
+        s = f'tolerance: {self.residual_tolerance}'
+        if self.residual_test is not None:
+            s += f', test, {self.residual_test}'
+            if self.scaling is not None:
+                s += f', {self.scaling}'
+        if self.solution_tolerance is not None:
+            s += f', {self.solution_tolerance}'
+            if self.solution_test is not None:
+                s += f', test, {self.solution_test}'
 
 class InitialValue(MBEntity):
     '''
@@ -97,4 +129,9 @@ class InitialValue(MBEntity):
 
     initial_time: Union[float, MBVar]
     final_time: Union[float, MBVar, str]
-    strategy: Union[StrategyChange, StrategyFactor, StrategyNoChange]
+    strategy: Optional[Union[StrategyChange, StrategyFactor, StrategyNoChange]] = None
+    min_time_step: Optional[Union[float, MBVar]] = None
+    max_time_step: Optional[Union[float, MBVar]] = None
+    time_step: Union[float, MBVar]
+    tolerance: Tolerance
+
