@@ -132,82 +132,203 @@ class MaxIterations(MBEntity):
             s += f', {self.optional_keywords}'
         return s
 
+# class Method(MBEntity):
+#     """Base class for every methods"""
+
+#     @abstractmethod
+#     def __str__(self) -> str:
+#         """Has to be overridden to output the MBDyn syntax"""
+#         pass
+
+# class CrankNikson(Method):
+#     def __str__(self):
+#         s = 'method: crank nikson'
+#         return s
+
+# class MS(Method):
+#     '''
+#     The 'ms' method is proved to be more accurate at high values of asymptotic radius (low dissipation),
+#     while the 'hope' method is proved to be more accurate at low values of the radius (high dissipation). They look
+#     nearly equivalent at radii close to 0.4, with the former giving the best compromise between algorithmic
+#     dissipation and accuracy at about 0.6.
+#     '''
+
+#     differential_radius: Union[DriveCaller, DriveCaller2]
+#     algebraic_radius: Optional[Union[DriveCaller, DriveCaller2]] = None
+
+#     def __str__(self):
+#         s = f'method: ms, {self.differential_radius}'
+#         if self.algebraic_radius is not None:
+#             s += f', {self.algebraic_radius}'
+#         return s
+
+# class Hope(Method):
+#     '''
+#     The 'ms' method is proved to be more accurate at high values of asymptotic radius (low dissipation),
+#     while the 'hope' method is proved to be more accurate at low values of the radius (high dissipation). They look
+#     nearly equivalent at radii close to 0.4, with the former giving the best compromise between algorithmic
+#     dissipation and accuracy at about 0.6.
+#     '''
+
+#     differential_radius: Union[DriveCaller, DriveCaller2]
+#     algebraic_radius: Optional[Union[DriveCaller, DriveCaller2]] = None
+
+#     def __str__(self):
+#         s = f'method: hope, {self.differential_radius}'
+#         if self.algebraic_radius is not None:
+#             s += f', {self.algebraic_radius}'
+#         return s
+    
+# class ThirdOrder(Method):
+#     '''
+#     This method is experimental. It is a third-order, two stage unconditionally stable method,
+#     which can be tuned to give the desired algorithmic dissipation by setting the value of the asymptotic
+#     spectral radius, which should not be too close to zero. Currently it is not possible to independently set
+#     the radius for the differential and the algebraic variables.
+#     '''
+
+#     differential_radius: Union[DriveCaller, DriveCaller2, Literal['ad hoc']]
+
+#     def __str__(self):
+#         s = f'method: third order, {self.differential_radius}'
+#         return s
+    
+# class BFD(Method):
+#     order: Optional[Union[int, MBVar]] = None # 1 / 2
+#     '''only first order (implicit Euler) and second order formulas are currently implemented, and the
+#     default is the second order formula, which is the most useful'''
+
+#     def __str__(self):
+#         s = 'method: bfd'
+#         if self.order is not None:
+#             s += f', order, {self.order}'
+#         return s
+
+# class ImplicitEuler(Method):
+#     def __str__(self):
+#         s = 'method: implicit euler'
+#         return s
+
 class Method(MBEntity):
-    """Base class for every methods"""
+    """Base class for every method"""
 
     @abstractmethod
     def __str__(self) -> str:
         """Has to be overridden to output the MBDyn syntax"""
         pass
 
-class CrankNikson(Method):
+class CrankNicolson(Method):
     def __str__(self):
-        s = 'method: crank nikson'
-        return s
+        return 'method: crank nicolson'
 
-class MS(Method):
-    '''
-    The 'ms' method is proved to be more accurate at high values of asymptotic radius (low dissipation),
-    while the 'hope' method is proved to be more accurate at low values of the radius (high dissipation). They look
-    nearly equivalent at radii close to 0.4, with the former giving the best compromise between algorithmic
-    dissipation and accuracy at about 0.6.
-    '''
-
+class MethodWithRadius(Method):
     differential_radius: Union[DriveCaller, DriveCaller2]
     algebraic_radius: Optional[Union[DriveCaller, DriveCaller2]] = None
-
+    
     def __str__(self):
-        s = f'method: ms, {self.differential_radius}'
+        s = f'method: {self.__class__.__name__.lower()}, {self.differential_radius}'
         if self.algebraic_radius is not None:
             s += f', {self.algebraic_radius}'
         return s
 
-class Hope(Method):
-    '''
-    The 'ms' method is proved to be more accurate at high values of asymptotic radius (low dissipation),
-    while the 'hope' method is proved to be more accurate at low values of the radius (high dissipation). They look
-    nearly equivalent at radii close to 0.4, with the former giving the best compromise between algorithmic
-    dissipation and accuracy at about 0.6.
-    '''
+class MS(MethodWithRadius):
+    """The 'ms' method (also referred to as 'ms2') allows for tuning algorithmic dissipation."""
+    pass  # Inherits the behavior from MethodWithRadius
 
-    differential_radius: Union[DriveCaller, DriveCaller2]
-    algebraic_radius: Optional[Union[DriveCaller, DriveCaller2]] = None
+class MS2(MethodWithRadius):
+    pass  # Inherits the behavior from MethodWithRadius
 
+class MS3(MethodWithRadius):
+    """The 'ms3' method is a three-step method allowing for algorithmic dissipation tuning."""
+    pass  # Inherits the behavior from MethodWithRadius
+
+class MS4(MethodWithRadius):
+    """The 'ms4' method is a four-step method allowing for algorithmic dissipation tuning."""
+    pass  # Inherits the behavior from MethodWithRadius
+
+class Hope(MethodWithRadius):
+    """The 'hope' method is a multi-stage method combining Crank-Nicolson and 'ms' methods."""
+    pass  # Inherits the behavior from MethodWithRadius
+
+class SS2(MethodWithRadius):
+    pass
+
+class SS3(MethodWithRadius):
+    pass
+
+class SS4(MethodWithRadius):
+    pass
+
+class Bathe(MethodWithRadius):
+    pass
+
+class MSSTC3(MethodWithRadius):
+    pass
+
+class MSSTC4(MethodWithRadius):
+    pass
+
+class MSSTC5(MethodWithRadius):
+    pass
+
+class MSSTH3(MethodWithRadius):
+    pass
+
+class MSSTH4(MethodWithRadius):
+    pass
+
+class MSSTH5(MethodWithRadius):
+    pass
+
+class Hybrid(MethodWithRadius):
+    default_hybrid_method: Literal['implicit euler', 'crank nicolson', 'ms2', 'hope']
+    
     def __str__(self):
-        s = f'method: hope, {self.differential_radius}'
+        s = f'method: hybrid, {self.default_hybrid_method}, {self.differential_radius}'
         if self.algebraic_radius is not None:
             s += f', {self.algebraic_radius}'
         return s
-    
-class ThirdOrder(Method):
-    '''
-    This method is experimental. It is a third-order, two stage unconditionally stable method,
-    which can be tuned to give the desired algorithmic dissipation by setting the value of the asymptotic
-    spectral radius, which should not be too close to zero. Currently it is not possible to independently set
-    the radius for the differential and the algebraic variables.
-    '''
 
-    differential_radius: Union[DriveCaller, DriveCaller2, Literal['ad hoc']]
+class DIRK33(Method):
+    def __str__(self):
+        return 'method: DIRK33'
+
+class DIRK43(Method):
+    def __str__(self):
+        return 'method: DIRK43'
+
+class DIRK54(Method):
+    def __str__(self):
+        return 'method: DIRK54'
+
+class BDF(Method):
+    order: Optional[Union[int, MBVar]] = None  # 1 or 2
 
     def __str__(self):
-        s = f'method: third order, {self.differential_radius}'
-        return s
-    
-class BFD(Method):
-    order: Optional[Union[int, MBVar]] = None # 1 / 2
-    '''only first order (implicit Euler) and second order formulas are currently implemented, and the
-    default is the second order formula, which is the most useful'''
-
-    def __str__(self):
-        s = 'method: bfd'
+        s = 'method: bdf'
         if self.order is not None:
             s += f', order, {self.order}'
         return s
 
 class ImplicitEuler(Method):
     def __str__(self):
-        s = 'method: implicit euler'
-        return s
+        return 'method: implicit euler'
+    
+class NonlinearSolver(MBEntity):
+    """The nonlinear solver solves a nonlinear problem F (x) = 0."""
+
+    @abstractmethod
+    def nonlinear_solver_name(self) -> str:
+        """Name of the specific nonlinear solver"""
+        pass
+
+    def nonlinear_solver_header(self) -> str:
+        """Common syntax for start of any nonlinear solver"""
+        return f'nonlinear solver: {self.nonlinear_solver_name()}'
+    
+class NewtonRaphson(NonlinearSolver):
+    pass
+    
 
 class InitialValue(MBEntity):
     '''
@@ -236,5 +357,4 @@ class InitialValue(MBEntity):
                 return "modify residual test"
             else:
                 raise ValueError("modify_residual_test has to be an int: 0 / 1, or a bool: True / False")
- 
 
