@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from MBDynLib import *
+from typing import Optional, Tuple, Union, List, Literal, Any
 
 imported_pydantic = False
 try:
@@ -329,6 +330,160 @@ class NonlinearSolver(MBEntity):
 class NewtonRaphson(NonlinearSolver):
     pass
     
+
+class MethodforEigenanalysis(MBEntity):
+    '''Base class for the methods used in Eigenanalysis'''
+
+    @abstractmethod
+    def __str__(self) -> str:
+        """Has to be overridden to output the MBDyn syntax"""
+        pass
+
+class UseLapack(MethodforEigenanalysis):
+    balance: Optional[Literal['no', 'sclae', 'permute', 'all']] = None
+
+    def __str__(self):
+        s = 'use lapack'
+        if self.balance is not None:
+            s += f', balance, {self.balance}'
+        return s
+    
+class UseArpack(MethodforEigenanalysis):
+    nev: Union[int, MBVar]
+    ncv: Union[int, MBVar]
+    tol: Union[float, MBVar]
+    max_iter: Optional[Union[int, MBVar]] = 300
+
+    @field_validator('tol')
+    def check_tolerance(cls, v):
+        if v < 0:
+            raise ValueError("Tolerance (tol) must be positive. Use zero for machine precision.")
+        return v
+
+    def __str__(self):
+        s = f'use arpack, {self.nev}, {self.ncv}, {self.tol}'
+        if self.max_iter != 300:
+            s += f', max iterations, {self.max_iter}'
+        return s
+
+class UseJdqz(MethodforEigenanalysis):
+    nev: Union[int, MBVar]
+    ncv: Union[int, MBVar]
+    tol: Union[float, MBVar]
+
+    @field_validator('tol')
+    def check_tolerance(cls, v):
+        if v < 0:
+            raise ValueError("Tolerance (tol) must be positive. Use zero for machine precision.")
+        return v
+
+    def __str__(self):
+        return f'use arpack, {self.nev}, {self.ncv}, {self.tol}'
+
+class UseExternal(MethodforEigenanalysis):
+    def __str__(self):
+        return 'use external'
+
+class Eigenanalysis(MBEntity):
+    '''
+    Performs the direct eigenanalysis of the problem. This functionality is experimental. Direct 
+    eigenanalysis based on the matrices of the system only makes sense when the system is in a 
+    steady conﬁguration, so the user needs to ensure this conﬁguration has been reached.
+    Moreover, not all elements currently contribute to the Jacobian matrix of the system, so YMMV. In case
+    of rotating systems, a steady conﬁguration could be reached when the model is expressed in a relative
+    reference frame, using the rigid body kinematics card.
+    '''
+
+    # Mode Options Enum for eigenvalue sorting criteria
+    class ModeOptions(Enum):
+        SMALLEST_MAGNITUDE = "smallest magnitude"
+        LARGEST_MAGNITUDE = "largest magnitude"
+        LARGEST_REAL_PART = "largest real part"
+        SMALLEST_REAL_PART = "smallest real part"
+        LARGEST_IMAGINARY_PART = "largest imaginary part"
+        SMALLEST_IMAGINARY_PART = "smallest imaginary part"
+
+    num_times: Optional[Union[int, MBVar]] = None
+    when: Union[float, MBVar, List[Union[float, MBVar]]]
+    suffix_width: Optional[Union[float, MBVar, Literal['compute']]] = None
+    suffix_format: Optional[str] = None
+    output_full_matrices: Optional[bool] = None
+    output_sparse_matrices: Optional[bool] = None
+    output_eigenvectors: Optional[bool] = None
+    output_geometry: Optional[bool] = None
+    matrix_precision: Optional[Union[float, MBVar]] = None
+    results_precision: Optional[Union[float, MBVar]] = None
+    parameter: Optional[Union[float, MBVar]] = None
+    mode_options: Optional[ModeOptions] = None
+    lower_frequency_limit: Optional[Union[float, MBVar]] = None
+    upper_frequency_limit: Optional[Union[float, MBVar]] = None
+    method: Optional[MethodforEigenanalysis] = None
+
+    @model_validator
+    def check_when_and_num_times(cls, values):
+        when = values.get('when')
+        num_times = values.get('num_times')
+        if isinstance(when, list) and num_times is None:
+            raise ValueError("If 'when' is given as a list, 'num_times' must also be provided.")
+        return values
+
+    def add_optional_field(self, s, field_name, field_value):
+        if field_value is True:
+            return s + f',\n\t{field_name}'
+        elif field_value is not None and field_value is not False:
+            return s + f',\n\t{field_name}, {field_value}'
+        return s
+
+    def __str__(self):
+        s = 'eigenanalysis: '
+        if isinstance(self.when, List):
+            s += f'\n\tlist, {self.num_times}, '
+            s += ', '.join(str(i) for i in self.when)
+        else:
+            s += f'\n\t{self.when}'
+        
+        s = self.add_optional_field(s, 'suffix width', self.suffix_width)
+        s = self.add_optional_field(s, 'suffix format', self.suffix_format)
+        s = self.add_optional_field(s, 'output full matrices', self.output_full_matrices)
+        s = self.add_optional_field(s, 'output sparse matrices', self.output_sparse_matrices)
+        s = self.add_optional_field(s, 'output eigenvectors', self.output_eigenvectors)
+        s = self.add_optional_field(s, 'output geometry', self.output_geometry)
+        s = self.add_optional_field(s, 'matrix output precision', self.matrix_precision)
+        s = self.add_optional_field(s, 'results output precision', self.results_precision)
+        s = self.add_optional_field(s, 'parameter', self.parameter)
+        s = self.add_optional_field(s, 'mode', self.mode_options)
+        s = self.add_optional_field(s, 'lower frequency limit', self.lower_frequency_limit)
+        s = self.add_optional_field(s, 'upper frequency limit', self.upper_frequency_limit)
+        if self.method is not None:
+            s += f',\n\t{self.method}'
+
+        # TODO: Delete these lines of code after review of the new approach from mentor
+        # if self.suffix_width is not None:
+        #     s += f',\n\tsuffix width, {self.suffix_width}'
+        # if self.suffix_format is not None:
+        #     s += f',\n\tsuffix format, {self.suffix_format}'
+        # if self.output_full_matrices is True:
+        #     s += f',\n\toutput full matrices'
+        # if self.output_sparse_matrices is True:
+        #     s += f',\n\toutput sparse matrices'
+        # if self.output_eigenvectors is True:
+        #     s += f',\n\toutput eigenvectors'
+        # if self.output_geometry is True:
+        #     s += f',\n\toutput geometry'
+        # if self.matrix_precision is not None:
+        #     s += f',\n\tmatrix output precision, {self.matrix_precision}'
+        # if self.results_precision is not None:
+        #     s += f',\n\tresults output precision, {self.results_precision}'
+        # if self.parameter is not None:
+        #     s += f',\n\tparameter, {self.parameter}'
+        # if self.mode_options is not None:
+        #     s += f',\n\tmode, {self.mode_options}'
+        # if self.lower_frequency_limit is not None:
+        #     s += f',\n\tlower frequency limit, {self.lower_frequency_limit}'
+        # if self.upper_frequency_limit is not None:
+        #     s += f',\n\tupper frequency limit, {self.upper_frequency_limit}'
+        # if self.method is not None:
+        #     s += f',\n\t{self.method}'
 
 class InitialValue(MBEntity):
     '''
