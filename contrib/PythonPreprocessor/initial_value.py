@@ -627,8 +627,16 @@ class LinearSolver(MBEntity):
             s += f',\n\tmax iterations, {self.refine_max_iter}'
         if self.preconditioner is not None:
             s += f',\n\tpreconditioner, {self.preconditioner}'
+        s += ';'
         return s
+    
 
+class DerivativesCoefficient(MBEntity):
+    coefficient: Union[float, str]  # Supports both numerical values and "auto" option
+    max_iterations: Optional[Union[int, MBVar]] = None
+    factor: Optional[Union[float, MBVar]] = None
+
+    pass
 
 class InitialValue(MBEntity):
     '''
@@ -646,7 +654,12 @@ class InitialValue(MBEntity):
     tolerance: Tolerance
     max_iterations: MaxIterations
     modify_residual_test: Optional[Union[bool, int]] = False    # 0 / 1 / True / False
-    method: Method
+    method: Optional[Method] = None
+    eigenanalysis: Optional[Eigenanalysis] = None
+    linear_solver: Optional[LinearSolver] = None
+    derivatives_tolerance: Optional[Union[float, MBVar]] = None
+    derivatives_max_iterations: Optional[Union[int, MBVar]] = None
+    derivatives_coefficient: DerivativesCoefficient
 
     @field_validator('modify_residual_test', mode='after')
     def set_modify_residual_test(cls, v):
