@@ -456,6 +456,8 @@ class Eigenanalysis(MBEntity):
         s = self.add_optional_field(s, 'upper frequency limit', self.upper_frequency_limit)
         if self.method is not None:
             s += f',\n\t{self.method}'
+        
+        return s
 
         # TODO: Delete these lines of code after review of the new approach from mentor
         # if self.suffix_width is not None:
@@ -484,6 +486,169 @@ class Eigenanalysis(MBEntity):
         #     s += f',\n\tupper frequency limit, {self.upper_frequency_limit}'
         # if self.method is not None:
         #     s += f',\n\t{self.method}'
+        # return s
+        
+class LinearSolver(MBEntity):
+    solver_name: Literal[
+        'naive', 'umfpack', 'klu', 'y12', 'lapack', 'superlu', 'taucs', 
+        'pardiso', 'pardiso_64', 'watson', 'pastix', 'qr', 'spqr', 
+        'aztecoo', 'amesos', 'siconos dense', 'siconos sparse'
+    ]
+
+    # General solver settings
+    storage_mode: Optional[Literal['map', 'cc', 'dir', 'grad']] = None
+    ordering: Optional[Literal['colamd', 'mmdata', 'amd', 'given', 'metis']] = None
+    
+    # Threading configuration
+    multithread: Optional[Literal['mt', 'multithread']] = None
+    threads: Optional[Union[int, MBVar]] = None
+    
+    # Solver-specific parameters
+    workspace_size: Optional[Union[int, MBVar]] = None
+    pivot_factor: Optional[Union[float, MBVar]] = None
+    drop_tolerance: Optional[Union[float, MBVar]] = None
+    block_size: Optional[Union[int, MBVar]] = None
+    
+    # Scaling options
+    scale: Optional[Literal[
+        'no', 'always', 'once', 'row max', 'row sum', 'column max', 
+        'column sum', 'lapack', 'iterative', 'row max column max'
+    ]] = None
+    scale_tolerance: Optional[Union[float, MBVar]] = None
+    scale_max_iter: Optional[Union[int, MBVar]] = None
+    
+    # Refinement and tolerance settings
+    refine_tolerance: Optional[Union[float, MBVar]] = None
+    refine_max_iter: Optional[Union[int, MBVar]] = None
+
+    # Preconditioner options
+    preconditioner: Optional[Literal[
+        'umfpack', 'klu', 'lapack', 'ilut', 'superlu', 'mumps',
+        'scalapack', 'dscpack', 'pardiso', 'paraklete', 'taucs', 'csparse'
+    ]] = None
+
+    @model_validator(mode="before")
+    def check_solver_specific_parameters(cls, values):
+        # Check if multithread is set but threads is None
+        if values.get('multithread') is not None and values.get('threads') is None:
+            raise ValueError("If multithread is set, threads must also be specified.")
+        
+        solver = values.get('solver_name')
+        
+        # Check parameters specific to 'umfpack'
+        if solver == 'umfpack':
+            values.setdefault('block_size', 32)
+            if values.get('workspace_size') is not None:
+                raise ValueError("workspace_size is ignored for umfpack solver.")
+            if values.get('drop_tolerance') is None:
+                values['drop_tolerance'] = 0.0  # Default drop tolerance for umfpack
+
+        # Enforce ordering for naive solver
+        if solver == 'naive' and values.get('ordering') is None:
+            raise ValueError("The naive solver requires an ordering option for robustness, e.g., 'colamd'.")
+
+        # Enforce refine_max_iter for certain solvers
+        if solver in ['pardiso', 'pardiso_64', 'pastix'] and values.get('refine_max_iter') is None:
+            raise ValueError(f"{solver} requires refine_max_iter for stability.")
+
+        # Enforce ignore of certain parameters for specific solvers
+        if solver in ['naive', 'y12', 'lapack'] and values.get('workspace_size') is not None:
+            raise ValueError(f"workspace_size is ignored for {solver} solver.")
+        
+        if solver == 'klu' and values.get('scale') not in [None, 'always', 'once']:
+            raise ValueError("KLU solver supports only 'always' or 'once' scale options.")
+
+        # Ensure that iterative refinement settings are consistent
+        if solver in ['umfpack', 'pastix'] and values.get('refine_max_iter') and values.get('refine_tolerance') is None:
+            raise ValueError("Refinement tolerance is required if refine_max_iter is set.")
+
+        # TODO: Have to check thoroughly 
+        # # Check for supported keywords by solvers
+        # supported_keywords = {
+        #     'umfpack': ['map', 'cc', 'dir', 'drop_tolerance', 'block_size', 'scale', 'refine_max_iter'],
+        #     'klu': ['map', 'cc', 'dir', 'scale', 'refine_max_iter'],
+        #     'y12': ['map', 'dir'],
+        #     'superlu': ['map', 'cc', 'scale'],
+        #     'pastix': ['map', 'cc', 'scale', 'refine_max_iter'],
+        #     'naive': ['cc', 'scale', 'colamd', 'mmdata'],
+        #     'spqr': ['colamd', 'amd', 'metis', 'given'],
+        # }
+
+        # if solver in supported_keywords and 'keywords' in values:
+        #     invalid_keywords = [kw for kw in values['keywords'] if kw not in supported_keywords[solver]]
+        #     if invalid_keywords:
+        #         raise ValueError(f"The following keywords are not supported by the {solver} solver: {', '.join(invalid_keywords)}.")
+
+        # Check for pivot factor validity
+        if values.get('pivot_factor') is not None:
+            if not (0.0 <= values['pivot_factor'] <= 1.0):
+                raise ValueError("pivot_factor must be between 0.0 and 1.0.")
+
+        # Check for drop tolerance with unsupported solvers
+        if solver != 'umfpack' and values.get('drop_tolerance') is not None:
+            raise ValueError("drop_tolerance can only be used with the umfpack solver.")
+
+        # Check for inconsistent scaling options
+        if solver not in ['naive', 'klu', 'umfpack', 'pastix'] and values.get('scale') is not None:
+            raise ValueError(f"scale option is not supported by the {solver} solver.")
+
+        # Check for valid block size for umfpack
+        if solver != 'umfpack' and values.get('block_size') is not None:
+            raise ValueError("block_size can only be used with the umfpack solver.")
+
+        return values
+
+    def add_optional_field(self, s, field_name, field_value):
+        if field_value is True:
+            return s + f',\n\t{field_name}'
+        elif field_value is not None and field_value is not False:
+            return s + f',\n\t{field_name}, {field_value}'
+        return s
+
+    def __str__(self):
+        s = f'linear solver: {self.solver_name}'
+        if self.storage_mode is not None:
+            s += f',\n\t{self.storage_mode}'
+        if self.ordering is not None:
+            s += f',\n\t{self.ordering}'
+        if self.multithread is not None:
+            s += f',\n\t{self.multithread}, {self.threads}'
+        if self.workspace_size:
+            s += f', workspace size, {self.workspace_size}'
+
+        # Optional pivot factor
+        if self.pivot_factor:
+            s += f', pivot factor, {self.pivot_factor}'
+
+        # Optional drop tolerance (specific to UMFPACK)
+        if self.drop_tolerance:
+            s += f', drop tolerance, {self.drop_tolerance}'
+
+        # Optional block size (specific to UMFPACK)
+        if self.block_size:
+            s += f', block size, {self.block_size}'
+
+        # Scale options
+        if self.scale:
+            s += f', scale, {self.scale}'
+            if self.scale_tolerance:
+                s += f', scale tolerance, {self.scale_tolerance}'
+            if self.scale_max_iter:
+                s += f', scale iterations, {self.scale_max_iter}'
+
+        # Refinement options
+        if self.refine_tolerance:
+            s += f', tolerance, {self.refine_tolerance}'
+        if self.refine_max_iter:
+            s += f', max iterations, {self.refine_max_iter}'
+
+        # Optional preconditioner
+        if self.preconditioner:
+            s += f', preconditioner, {self.preconditioner}'
+
+        return s
+
+
 
 class InitialValue(MBEntity):
     '''
