@@ -487,7 +487,8 @@ class Eigenanalysis(MBEntity):
         # if self.method is not None:
         #     s += f',\n\t{self.method}'
         # return s
-        
+
+
 class LinearSolver(MBEntity):
     solver_name: Literal[
         'naive', 'umfpack', 'klu', 'y12', 'lapack', 'superlu', 'taucs', 
@@ -598,13 +599,6 @@ class LinearSolver(MBEntity):
 
         return values
 
-    def add_optional_field(self, s, field_name, field_value):
-        if field_value is True:
-            return s + f',\n\t{field_name}'
-        elif field_value is not None and field_value is not False:
-            return s + f',\n\t{field_name}, {field_value}'
-        return s
-
     def __str__(self):
         s = f'linear solver: {self.solver_name}'
         if self.storage_mode is not None:
@@ -613,41 +607,27 @@ class LinearSolver(MBEntity):
             s += f',\n\t{self.ordering}'
         if self.multithread is not None:
             s += f',\n\t{self.multithread}, {self.threads}'
-        if self.workspace_size:
-            s += f', workspace size, {self.workspace_size}'
-
-        # Optional pivot factor
-        if self.pivot_factor:
-            s += f', pivot factor, {self.pivot_factor}'
-
-        # Optional drop tolerance (specific to UMFPACK)
-        if self.drop_tolerance:
-            s += f', drop tolerance, {self.drop_tolerance}'
-
-        # Optional block size (specific to UMFPACK)
-        if self.block_size:
-            s += f', block size, {self.block_size}'
-
-        # Scale options
-        if self.scale:
-            s += f', scale, {self.scale}'
-            if self.scale_tolerance:
-                s += f', scale tolerance, {self.scale_tolerance}'
-            if self.scale_max_iter:
-                s += f', scale iterations, {self.scale_max_iter}'
-
-        # Refinement options
-        if self.refine_tolerance:
-            s += f', tolerance, {self.refine_tolerance}'
-        if self.refine_max_iter:
-            s += f', max iterations, {self.refine_max_iter}'
-
-        # Optional preconditioner
-        if self.preconditioner:
-            s += f', preconditioner, {self.preconditioner}'
-
+        if self.workspace_size is not None:
+            s += f',\n\tworkspace size, {self.workspace_size}'
+        if self.pivot_factor is not None:
+            s += f',\n\tpivot factor, {self.pivot_factor}'
+        if self.drop_tolerance is not None:
+            s += f',\n\tdrop tolerance, {self.drop_tolerance}'
+        if self.block_size is not None:
+            s += f',\n\tblock size, {self.block_size}'
+        if self.scale is not None:
+            s += f',\n\tscale, {self.scale}'
+            if self.scale_tolerance is not None:
+                s += f',\n\t\tscale tolerance, {self.scale_tolerance}'
+            if self.scale_max_iter is not None:
+                s += f',\n\t\tscale iterations, {self.scale_max_iter}'
+        if self.refine_tolerance is not None:
+            s += f',\n\ttolerance, {self.refine_tolerance}'
+        if self.refine_max_iter is not None:
+            s += f',\n\tmax iterations, {self.refine_max_iter}'
+        if self.preconditioner is not None:
+            s += f',\n\tpreconditioner, {self.preconditioner}'
         return s
-
 
 
 class InitialValue(MBEntity):
