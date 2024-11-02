@@ -659,6 +659,31 @@ class DerivativesCoefficient(MBEntity):
             s += f",\n\tfactor, {self.factor}"
         s += ';'
         return s
+    
+class OutputSettings(MBEntity):
+    items: List[Literal[
+            "iterations", "residual", "solution", "jacobian matrix", 
+            "messages", "counter", "bailout", "matrix condition number", 
+            "solver condition number", "cpu time", "none"
+        ]]
+
+    # TODO: Have to get a review
+    @model_validator(mode="before")
+    def validate_items(cls, values):
+        items = values.get("items")
+        # Ensure the 'none' keyword is used alone or as the first item
+        if "none" in items and items[0] != "none":
+            raise ValueError("If 'none' is specified, it must be the first item.")
+        return values
+
+    def __str__(self):
+        return f"output: {', '.join(self.items)};"
+    
+class OutputMeter(MBEntity):
+    when: Union[DriveCaller, DriveCaller2]
+
+    def __str__(self):
+        return f"output meter: {self.when};"
 
 
 class InitialValue(MBEntity):
@@ -682,8 +707,10 @@ class InitialValue(MBEntity):
     linear_solver: Optional[LinearSolver] = None
     derivatives_tolerance: Optional[Union[float, MBVar]] = None
     derivatives_max_iterations: Optional[Union[int, MBVar]] = None
-    derivatives_coefficient: DerivativesCoefficient
-
+    derivatives_coefficient: Optional[DerivativesCoefficient] = None
+    output_settings: Optional[OutputSettings] = None
+    output_meter: Optional[OutputMeter] = None
+    
     @field_validator('modify_residual_test', mode='after')
     def set_modify_residual_test(cls, v):
         if isinstance(v, int) or isinstance(v, bool):
