@@ -627,7 +627,6 @@ class LinearSolver(MBEntity):
             s += f',\n\tmax iterations, {self.refine_max_iter}'
         if self.preconditioner is not None:
             s += f',\n\tpreconditioner, {self.preconditioner}'
-        s += ';'
         return s
     
 
@@ -657,7 +656,6 @@ class DerivativesCoefficient(MBEntity):
             s += f",\n\tmax iterations, {self.max_iterations}"
         if self.factor is not None:
             s += f",\n\tfactor, {self.factor}"
-        s += ';'
         return s
     
 class OutputSettings(MBEntity):
@@ -677,14 +675,8 @@ class OutputSettings(MBEntity):
         return values
 
     def __str__(self):
-        return f"output: {', '.join(self.items)};"
+        return f"output: {', '.join(self.items)}"
     
-class OutputMeter(MBEntity):
-    when: Union[DriveCaller, DriveCaller2]
-
-    def __str__(self):
-        return f"output meter: {self.when};"
-
 
 class InitialValue(MBEntity):
     '''
@@ -694,10 +686,10 @@ class InitialValue(MBEntity):
     '''
 
     initial_time: Union[float, MBVar]
-    final_time: Union[float, MBVar, str]
+    final_time: Union[float, MBVar, Literal["forever"]]
     strategy: Optional[Union[StrategyChange, StrategyFactor, StrategyNoChange]] = None
     min_time_step: Optional[Union[float, MBVar]] = None
-    max_time_step: Optional[Union[float, MBVar]] = None
+    max_time_step: Optional[Union[float, MBVar, Literal["unlimited"]]] = None
     time_step: Union[float, MBVar]
     tolerance: Tolerance
     max_iterations: MaxIterations
@@ -709,15 +701,50 @@ class InitialValue(MBEntity):
     derivatives_max_iterations: Optional[Union[int, MBVar]] = None
     derivatives_coefficient: Optional[DerivativesCoefficient] = None
     output_settings: Optional[OutputSettings] = None
-    output_meter: Optional[OutputMeter] = None
-    
+    output_meter: Optional[Union[DriveCaller, DriveCaller2]] = None
+
     @field_validator('modify_residual_test', mode='after')
     def set_modify_residual_test(cls, v):
-        if isinstance(v, int) or isinstance(v, bool):
-            if v == 0 or v == False:
-                return None
-            elif v == 1 or v == True:
-                return "modify residual test"
+        if isinstance(v, (int, bool)):  # This checks if v is an int or a bool
+            if v in [0, False]:
+                return None  # Return None for 0 or False
+            elif v in [1, True]:
+                return "modify residual test"  # Return specific string for 1 or True
             else:
-                raise ValueError("modify_residual_test has to be an int: 0 / 1, or a bool: True / False")
-
+                raise ValueError("modify_residual_test must be 0, 1, True, or False.")
+        else:
+            raise TypeError("modify_residual_test must be of type int or bool.")
+        
+    def __str__(self):
+        s = "begin: initial value;\n"
+        s += f"\tinitial time: {self.initial_time};\n"
+        s += f"\tfinal time: {self.final_time};\n"
+        if self.strategy:
+            s += f"\t{self.strategy};\n"
+        if self.min_time_step:
+            s += f"\tmin time step: {self.min_time_step};\n"
+        if self.max_time_step:
+            s += f"\tmax time step: {self.max_time_step};\n"
+        s += f"\ttime step: {self.time_step};\n"
+        s += f"\t{self.max_iterations};\n"
+        s += f"\t{self.tolerance};\n"
+        if self.modify_residual_test:
+            s += f"\tmodify residual test;\n"
+        if self.method:
+            s += f"\t{self.method};\n"
+        if self.eigenanalysis:
+            s += f"\t{self.eigenanalysis};\n"
+        if self.linear_solver:
+            s += f"\t{self.linear_solver};\n"
+        if self.derivatives_tolerance:
+            s += f"\tderivatives tolerance: {self.derivatives_tolerance};\n"
+        if self.derivatives_max_iterations:
+            s += f"\tderivatives max iterations: {self.derivatives_max_iterations};\n"
+        if self.derivatives_coefficient:
+            s += f"\t{self.derivatives_coefficient};\n"
+        if self.output_settings:
+            s += f"\t{self.output_settings};\n"
+        if self.output_meter:
+            s += f"\toutput meter: {self.output_meter};\n"
+        s += "end: initial value;"
+        return s
