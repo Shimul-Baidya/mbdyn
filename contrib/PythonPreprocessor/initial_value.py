@@ -632,11 +632,34 @@ class LinearSolver(MBEntity):
     
 
 class DerivativesCoefficient(MBEntity):
-    coefficient: Union[float, str]  # Supports both numerical values and "auto" option
+    coefficient: Optional[Union[float, MBVar]] = None
+    is_auto: Optional[bool] = False
     max_iterations: Optional[Union[int, MBVar]] = None
     factor: Optional[Union[float, MBVar]] = None
 
-    pass
+    @model_validator(mode="before")
+    def validate_auto_case(cls, values):
+        # Check that `factor` and `max_iterations` are only specified when `auto` is true
+        if not values.get("is_auto"):
+            if values.get("coefficient") is None:
+                raise ValueError("When 'auto' is not selected, a numeric value for 'coefficient' must be specified.")
+            if values.get("factor") is not None or values.get("max_iterations") is not None:
+                raise ValueError("`factor` and `max_iterations` can only be specified when 'auto' is selected.")
+        return values
+
+    def __str__(self):
+        s = 'derivatives coefficient: '
+        if self.is_auto:
+            s += f"{f'{self.coefficient}, ' if self.coefficient is not None else ''}auto"
+        else:
+            s += f'{self.coefficient}'
+        if self.max_iterations is not None:
+            s += f",\n\tmax iterations, {self.max_iterations}"
+        if self.factor is not None:
+            s += f",\n\tfactor, {self.factor}"
+        s += ';'
+        return s
+
 
 class InitialValue(MBEntity):
     '''
