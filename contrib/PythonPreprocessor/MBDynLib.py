@@ -6156,46 +6156,55 @@ class VariableStep(FixedStep):
         base_str += f'"{self.file_name}"'
         return base_str
 
-class Data:
-    problem_type = ('INITIAL VALUE', 'INVERSE DYNAMICS')
-    def __init__(self, **kwargs):
-        for key, value in kwargs.items():
-            if key == 'problem type':
-                if value in self.problem_type:
-                    self.type = value
-                else:
-                    raise ValueError('Unrecognised problem type')            
+# class Data:
+#     problem_type = ('INITIAL VALUE', 'INVERSE DYNAMICS')
+#     def __init__(self, **kwargs):
+#         for key, value in kwargs.items():
+#             if key == 'problem type':
+#                 if value in self.problem_type:
+#                     self.type = value
+#                 else:
+#                     raise ValueError('Unrecognised problem type')            
 
-class InitialValueStrategy:
-    strategy_type = ('NO CHANGE', 'FACTOR', 'CHANGE')
-    def __init__(self, stype, **kwargs):
-        if stype in self.strategy_type:
-            self.type = value
-        else:
-            raise ValueError('Unrecognised strategy')
+# class InitialValueStrategy:
+#     strategy_type = ('NO CHANGE', 'FACTOR', 'CHANGE')
+#     def __init__(self, stype, **kwargs):
+#         if stype in self.strategy_type:
+#             self.type = value
+#         else:
+#             raise ValueError('Unrecognised strategy')
        
-        if self.type == 'FACTOR':
-            for key, value in kwargs.items():
-                if key == 'reduction_factor':
-                    self.reduction_factor = value
-                if key == 'steps_before_reduction':
-                    self.steps_before_reduction = value
-                if key == 'raise_factor':
-                    self.raise_factor = value
-                if key == 'steps_before_raise':
-                    self.steps_before_raise = value
-                if key == 'minimum_iterations':
-                    self.minimum_iterations = value
-                if key == 'maximum_iterations':
-                    self.maximum_iterations = value
-        if self.self_type == 'CHANGE':
-            self.time_step_pattern = DriveCaller('const', 1e-3);
+#         if self.type == 'FACTOR':
+#             for key, value in kwargs.items():
+#                 if key == 'reduction_factor':
+#                     self.reduction_factor = value
+#                 if key == 'steps_before_reduction':
+#                     self.steps_before_reduction = value
+#                 if key == 'raise_factor':
+#                     self.raise_factor = value
+#                 if key == 'steps_before_raise':
+#                     self.steps_before_raise = value
+#                 if key == 'minimum_iterations':
+#                     self.minimum_iterations = value
+#                 if key == 'maximum_iterations':
+#                     self.maximum_iterations = value
+#         if self.self_type == 'CHANGE':
+#             self.time_step_pattern = DriveCaller('const', 1e-3);
 
-class InitialValue:
-    def __init__(self):
-        self.initial_time = 0.
-        self.final_time = 10.
-        self.strategy = InitialValueStrategy()
-        self.min_time_step = 1e-6
-        self.max_time_step = 1.
-        self.time_step = 1e-3
+# class InitialValue:
+#     def __init__(self):
+#         self.initial_time = 0.
+#         self.final_time = 10.
+#         self.strategy = InitialValueStrategy()
+#         self.min_time_step = 1e-6
+#         self.max_time_step = 1.
+#         self.time_step = 1e-3
+
+class Data(MBEntity):
+    problem: Union[Literal["initial value"], Literal["inverse dynamics"]] = "initial value"
+
+    def __str__(self):
+        s = 'begin: data;\n'
+        s += f'\tproblem: {self.problem};\n'
+        s += 'end: data;'
+        return s

@@ -311,5 +311,6 @@ class ControlData(MBEntity):
             s += f'\tsurface loads: {self.surface_loads};\n'
         if self.rigid_bodies:
             s += f'\trigid bodies: {self.rigid_bodies};\n'
-        
+
+        s += 'end: control data;'
         return s
