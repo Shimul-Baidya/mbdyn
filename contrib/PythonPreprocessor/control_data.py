@@ -74,6 +74,28 @@ class Print(MBEntity):
             if idx < len(self.items) - 1:  
                 s += ", "
         return s
+    
+class OutputResults(MBEntity):
+    '''
+    This deprecated statement was intended for producing output in formats compatible with other software.
+    Most of them are produced in form of post-processing, based on the default raw output.
+    '''
+
+    file_format: Literal["classic", "classic64", "nc4", "nc4classic"] = "nc4"
+    sync: bool = False
+    text: bool = False
+
+    def __str__(self):
+        s = f'output results: netcdf, {self.file_format}'
+        if self.sync:
+            s += ',\n\tsync'
+        else: 
+            s += ',\n\tno sync'
+        if self.text:
+            s += ', text'
+        else: 
+            s += ', no text'
+        return s
 
 
 class ControlData(MBEntity):
@@ -91,4 +113,8 @@ class ControlData(MBEntity):
     skip_initial_joint_assembly: Optional[Union[bool, int]] = False    # 0 / 1 / True / False
     simulation_title: Optional[str] = None
     print: Optional[Print] = None
-    
+    output_frequency: Optional[Union[int, MBVar]] = None
+    output_meter: Optional[Union[DriveCaller, DriveCaller2]] = None
+    output_results: Optional[OutputResults] = None
+    default_orientation: Optional[Union[Literal["euler123", "euler313", "euler321", "orientation vector", "orientation matrix"]]] = "euler123"
+    model: Literal["static"] = "static"
