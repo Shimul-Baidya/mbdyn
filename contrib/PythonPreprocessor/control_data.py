@@ -96,6 +96,54 @@ class OutputResults(MBEntity):
         else: 
             s += ', no text'
         return s
+    
+class ConstRBK(MBEntity):
+    position: Optional[Position2] = None
+    orientation: Optional[Position2] = None
+    velocity: Optional[Position2] = None
+    angular_velocity: Optional[Position2] = None
+    acceleration: Optional[Position2] = None
+    angular_acceleration: Optional[Position2] = None
+
+    def __str__(self):
+        s = 'const'
+        if self.position:
+            s += f',\n\tposition, {self.position}'
+        if self.orientation:
+            s += f',\n\torientation, {self.orientation}'
+        if self.velocity:
+            s += f',\n\tvelocity, {self.velocity}'
+        if self.angular_velocity:
+            s += f',\n\tangular velocity, {self.angular_velocity}'
+        if self.acceleration:
+            s += f',\n\tacceleration, {self.acceleration}'
+        if self.angular_acceleration:
+            s += f',\n\tangular acceleration, {self.angular_acceleration}'
+        return s
+
+class DriveRBK(MBEntity):
+    position: Optional[TplDriveCaller] = None
+    orientation: Optional[TplDriveCaller] = None
+    velocity: Optional[TplDriveCaller] = None
+    angular_velocity: Optional[TplDriveCaller] = None
+    acceleration: Optional[TplDriveCaller] = None
+    angular_acceleration: Optional[TplDriveCaller] = None
+
+    def __str__(self):
+        s = 'drive'
+        if self.position:
+            s += f',\n\tposition, {self.position}'
+        if self.orientation:
+            s += f',\n\torientation, {self.orientation}'
+        if self.velocity:
+            s += f',\n\tvelocity, {self.velocity}'
+        if self.angular_velocity:
+            s += f',\n\tangular velocity, {self.angular_velocity}'
+        if self.acceleration:
+            s += f',\n\tacceleration, {self.acceleration}'
+        if self.angular_acceleration:
+            s += f',\n\tangular acceleration, {self.angular_acceleration}'
+        return s
 
 
 class ControlData(MBEntity):
@@ -118,3 +166,4 @@ class ControlData(MBEntity):
     output_results: Optional[OutputResults] = None
     default_orientation: Optional[Union[Literal["euler123", "euler313", "euler321", "orientation vector", "orientation matrix"]]] = "euler123"
     model: Literal["static"] = "static"
+    rbk_data: Optional[Union[ConstRBK, DriveRBK]] = None
