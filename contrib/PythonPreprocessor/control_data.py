@@ -164,6 +164,152 @@ class ControlData(MBEntity):
     output_frequency: Optional[Union[int, MBVar]] = None
     output_meter: Optional[Union[DriveCaller, DriveCaller2]] = None
     output_results: Optional[OutputResults] = None
-    default_orientation: Optional[Union[Literal["euler123", "euler313", "euler321", "orientation vector", "orientation matrix"]]] = "euler123"
+    default_orientation: Union[Literal["euler123", "euler313", "euler321", "orientation vector", "orientation matrix"]] = "euler123"
     model: Literal["static"] = "static"
     rbk_data: Optional[Union[ConstRBK, DriveRBK]] = None
+
+    ## Model Counter Cards
+    # Nodes
+    abstract_nodes: Optional[Union[int, str]] = None
+    electric_nodes: Optional[Union[int, str]] = None
+    hydraulic_nodes: Optional[Union[int, str]] = None
+    parameter_nodes: Optional[Union[int, str]] = None
+    structural_nodes: Optional[Union[int, str]] = None
+    thermal_nodes: Optional[Union[int, str]] = None
+
+    # Drivers
+    file_drivers: Optional[Union[int, str]] = None
+
+    # Elements
+    aerodynamic_elements: Optional[Union[int, str]] = None
+    aeromodals: Optional[Union[int, str]] = None
+    air_properties: Optional[Union[int, str]] = None
+    automatic_structural_elements: Optional[Union[int, str]] = None
+    beams: Optional[Union[int, str]] = None
+    bulk_elements: Optional[Union[int, str]] = None
+    electric_bulk_elements: Optional[Union[int, str]] = None
+    electric_elements: Optional[Union[int, str]] = None
+    external_elements: Optional[Union[int, str]] = None
+    forces: Optional[Union[int, str]] = None
+    genels: Optional[Union[int, str]] = None
+    gravity: Optional[Union[int, str]] = None
+    hydraulic_elements: Optional[Union[int, str]] = None
+    induced_velocity_elements: Optional[Union[int, str]] = None
+    joints: Optional[Union[int, str]] = None
+    joint_regularizations: Optional[Union[int, str]] = None
+    loadable_elements: Optional[Union[int, str]] = None
+    output_elements: Optional[Union[int, str]] = None
+    solids: Optional[Union[int, str]] = None
+    surface_loads: Optional[Union[int, str]] = None
+    rigid_bodies: Optional[Union[int, str]] = None
+
+    @field_validator('use_auto_differentiation', mode='after')
+    def set_use_auto_differentiation(cls, v):
+        if isinstance(v, (int, bool)):  # Check if v is an int or a bool
+            if v in [0, False]:
+                return None  # Return None for 0 or False
+            elif v in [1, True]:
+                return "use auto differentiation"  # Return specific string for 1 or True
+            else:
+                raise ValueError("use_auto_differentiation must be 0, 1, True, or False.")
+        else:
+            raise TypeError("use_auto_differentiation must be of type int or bool.")
+
+    @field_validator('skip_initial_joint_assembly', mode='after')
+    def set_skip_initial_joint_assembly(cls, v):
+        if isinstance(v, (int, bool)):  # Check if v is an int or a bool
+            if v in [0, False]:
+                return None  # Return None for 0 or False
+            elif v in [1, True]:
+                return "skip initial joint assembly"  # Return specific string for 1 or True
+            else:
+                raise ValueError("skip_initial_joint_assembly must be 0, 1, True, or False.")
+        else:
+            raise TypeError("skip_initial_joint_assembly must be of type int or bool.")
+
+    def __str__(self):
+        s = 'begin: control data;\n'
+        if self.use_auto_differentiation:
+            s += f'\tuse automatic differentiation;\n'
+        if self.skip_initial_joint_assembly:
+            s += f'\tskip initial joint assembly;\n'
+        if self.simulation_title:
+            s += f'\ttitle: {self.simulation_title};\n'
+        if self.print:
+            s += f'\t{self.print};\n'
+        if self.output_frequency:
+            s += f'\toutput frequency: {self.output_frequency};\n'
+        if self.output_meter:
+            s += f'\toutput meter: {self.output_meter};\n'
+        if self.output_results:
+            s += f'\t{self.output_results};\n'
+
+        s += f'\tdefault orientation: {self.default_orientation};\n'
+        s += f'\tmodel: {self.model};\n'
+
+        if self.rbk_data:
+            s += f'\trigid body kinematics: {self.rbk_data};\n'
+
+        # Model Counter Cards - Nodes
+        if self.abstract_nodes:
+            s += f'\tabstract nodes: {self.abstract_nodes};\n'
+        if self.electric_nodes:
+            s += f'\telectric nodes: {self.electric_nodes};\n'
+        if self.hydraulic_nodes:
+            s += f'\thydraulic nodes: {self.hydraulic_nodes};\n'
+        if self.parameter_nodes:
+            s += f'\tparameter nodes: {self.parameter_nodes};\n'
+        if self.structural_nodes:
+            s += f'\tstructural nodes: {self.structural_nodes};\n'
+        if self.thermal_nodes:
+            s += f'\tthermal nodes: {self.thermal_nodes};\n'
+        
+        # Model Counter Cards - Drivers
+        if self.file_drivers:
+            s += f'\tfile drivers: {self.file_drivers};\n'
+        
+        # Model Counter Cards - Elements
+        if self.aerodynamic_elements:
+            s += f'\taerodynamic elements: {self.aerodynamic_elements};\n'
+        if self.aeromodals:
+            s += f'\taeromodals: {self.aeromodals};\n'
+        if self.air_properties:
+            s += f'\tair properties: {self.air_properties};\n'
+        if self.automatic_structural_elements:
+            s += f'\tautomatic structural elements: {self.automatic_structural_elements};\n'
+        if self.beams:
+            s += f'\tbeams: {self.beams};\n'
+        if self.bulk_elements:
+            s += f'\tbulk elements: {self.bulk_elements};\n'
+        if self.electric_bulk_elements:
+            s += f'\telectric bulk elements: {self.electric_bulk_elements};\n'
+        if self.electric_elements:
+            s += f'\telectric elements: {self.electric_elements};\n'
+        if self.external_elements:
+            s += f'\texternal elements: {self.external_elements};\n'
+        if self.forces:
+            s += f'\tforces: {self.forces};\n'
+        if self.genels:
+            s += f'\tgenels: {self.genels};\n'
+        if self.gravity:
+            s += f'\tgravity: {self.gravity};\n'
+        if self.hydraulic_elements:
+            s += f'\thydraulic elements: {self.hydraulic_elements};\n'
+        if self.induced_velocity_elements:
+            s += f'\tinduced velocity elements: {self.induced_velocity_elements};\n'
+        if self.joints:
+            s += f'\tjoints: {self.joints};\n'
+        if self.joint_regularizations:
+            s += f'\tjoint regularizations: {self.joint_regularizations};\n'
+        if self.loadable_elements:
+            s += f'\tloadable elements: {self.loadable_elements};\n'
+        if self.output_elements:
+            s += f'\toutput elements: {self.output_elements};\n'
+        if self.solids:
+            s += f'\tsolids: {self.solids};\n'
+        if self.surface_loads:
+            s += f'\tsurface loads: {self.surface_loads};\n'
+        if self.rigid_bodies:
+            s += f'\trigid bodies: {self.rigid_bodies};\n'
+        
+        return s
