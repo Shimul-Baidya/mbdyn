@@ -78,6 +78,10 @@ class StrategyFactor(Strategy):
         return s
 
 class StrategyChange(Strategy):
+    # TODO: Remove this relaxed config when all DriveCallers are refactored
+    class Config:
+        arbitrary_types_allowed = True
+
     time_step_pattern: Union[DriveCaller, DriveCaller2]
 
     def __str__(self):
@@ -223,6 +227,10 @@ class CrankNicolson(Method):
         return 'method: crank nicolson'
 
 class MethodWithRadius(Method):
+    # TODO: Remove this relaxed config when all DriveCallers are refactored
+    class Config:
+        arbitrary_types_allowed = True
+
     differential_radius: Union[DriveCaller, DriveCaller2]
     algebraic_radius: Optional[Union[DriveCaller, DriveCaller2]] = None
     
@@ -419,7 +427,7 @@ class Eigenanalysis(MBEntity):
     upper_frequency_limit: Optional[Union[float, MBVar]] = None
     method: Optional[MethodforEigenanalysis] = None
 
-    @model_validator
+    @model_validator(mode='after')
     def check_when_and_num_times(cls, values):
         when = values.get('when')
         num_times = values.get('num_times')
@@ -684,6 +692,10 @@ class InitialValue(MBEntity):
     integration schemes that can be cast in a broad family of multistep and, experimentally, Implicit Runge-
     Kutta-like schemes
     '''
+
+    # TODO: Remove this relaxed config when all DriveCallers are refactored
+    class Config:
+        arbitrary_types_allowed = True
 
     initial_time: Union[float, MBVar]
     final_time: Union[float, MBVar, Literal["forever"]]

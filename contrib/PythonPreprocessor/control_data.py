@@ -122,6 +122,10 @@ class ConstRBK(MBEntity):
         return s
 
 class DriveRBK(MBEntity):
+    # TODO: Remove this relaxed config when all DriveCallers are refactored
+    class Config:
+        arbitrary_types_allowed = True
+
     position: Optional[TplDriveCaller] = None
     orientation: Optional[TplDriveCaller] = None
     velocity: Optional[TplDriveCaller] = None
@@ -156,6 +160,10 @@ class ControlData(MBEntity):
     is going to change, giving raise to a “free” and resizeable structure. But this practice is to be considered
     reliable since it allows a sort of double-check on the entities that are inserted.
     '''
+
+    # TODO: Remove this relaxed config when all DriveCallers are refactored
+    class Config:
+        arbitrary_types_allowed = True
 
     use_auto_differentiation: Optional[Union[bool, int]] = False    # 0 / 1 / True / False
     skip_initial_joint_assembly: Optional[Union[bool, int]] = False    # 0 / 1 / True / False
