@@ -54,7 +54,7 @@ import builtins
 from enum import Enum
 from numbers import Number, Integral
 import sys
-from typing import Optional, Tuple, Union, List, Literal, Any
+from typing import Optional, Tuple, Union, List, Literal, Any, ClassVar, Tuple
 import warnings
 
 
@@ -375,114 +375,124 @@ class power(binary_expression):
 class MBVarType(str, Enum):
     """Built-in types in math parser"""
     BOOL: str = 'bool'
-    """Boolean number (promoted to `integer`, `real`, or `string` (0 or 1), whenever required)"""
     INTEGER: str = 'integer'
-    """Integer number (promoted to `real`, or `string`, whenever required)"""
     REAL: str = 'real'
-    """Real number (promoted to `string` whenever required)"""
     STRING: str = 'string'
-    """Text string"""
 
 class MBVarModifiers(str, Enum):
     CONST: str = 'const'
     DEFINE: str = 'ifndef const'
 
 class MBVar(MBEntity, terminal_expression):
-    base_type: MBVarType
-    type_modifier: Optional[MBVarModifiers]
-    var_types: Tuple[str] = tuple([t.value for t in MBVarType] +\
+    name: str
+    var_type: str
+    expression: Any
+
+    var_types: ClassVar[Tuple[str]] = tuple([t.value for t in MBVarType] +\
                                   [f'{MBVarModifiers.CONST} {t.value}' for t in MBVarType] +\
                                   [f'{MBVarModifiers.DEFINE} {t.value}' for t in MBVarType])
-    def __init__(self, name, var_type, expression):
-        assert(name)
-        self.name = name
-        self.var_type = var_type
-        self.expression = expression
-        assert (var_type in self.var_types), (
-            '\n-------------------\nERROR:' + 
-            ' MBVar: unknown variable type {}\n\t'.format(var_type) + 
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @field_validator('var_type')
+    def validate_var_type(cls, v):
+        assert v in cls.var_types, (
+            f'\n-------------------\nERROR: MBVar: unknown variable type {v}\n\t' +
             '\n-------------------\n'
         )
-       #self.do_declare = do_declare
-        #if self.do_declare:
-        assert (name in declared_ConstMBVars) == False, (
-            '\n-------------------\nERROR:' + 
-            ' re-defining an already declared const variable:\n\t' + 
-            var_type + ' ' + name + 
-            '\n-------------------\n')
-        assert (name in declared_IfndefMBVars) == False, (
-            '\n-------------------\nERROR:' + 
-            ' re-defining an already declared ifndef variable:\n\t' + 
-            var_type + ' ' + name + 
-            '\n-------------------\n')
+        return v
+
+    @model_validator(mode='after')
+    def validate_declarations(self):
+        assert self.name not in declared_ConstMBVars, (
+            '\n-------------------\nERROR: re-defining an already declared const variable:\n\t' +
+            f'{self.var_type} {self.name}\n-------------------\n'
+        )
+        
+        assert self.name not in declared_IfndefMBVars, (
+            '\n-------------------\nERROR: re-defining an already declared ifndef variable:\n\t' +
+            f'{self.var_type} {self.name}\n-------------------\n'
+        )
+        return self
+
+    def __init__(self, name: str, var_type: str, expression: Any):
+        super().__init__(name=name, var_type=var_type, expression=expression)
         self.declare()
+
     def __get__(self):
         return get_value(self.expression)
+
     def __trunc__(self):
         y = self.__get__()
         assert isinstance(y, int), (
-                'Error, __trunc__  required for expression \n\'' + 
-                str(self) + 
-                '\'\nof type ' + str(type(y)) +
-                ' \n')
+            f'Error, __trunc__ required for expression \n\'{self}\'\nof type {type(y)}\n'
+        )
         return self.expression.__trunc__()
+
     def __index__(self):
         return self.expression.__trunc__()
+
     def __str__(self):
         return str(self.name)
+    
+    def __repr__(self):
+        # This ensures that when the object is used in lists or other contexts,
+        # it still outputs just the name
+        return self.__str__()
+
     def __lt__(self, other):
         return self.__get__() < other
+
     def __gt__(self, other):
         return self.__get__() > other
+
     def __eq__(self, other):
         return self.__get__() == other
+
     def __le__(self, other):
         return self.__get__() <= other
+
     def __ge__(self, other):
         return self.__get__() >= other
+
     def declare(self):
         if self.name in declared_MBVars:
             assert declared_MBVars[self.name].var_type == self.var_type, (
-                '\n-------------------\nERROR:' + 
-                ' re-defining an already declared variable of type ' + str(declared_MBVars[self.name].var_type) + '\n' + 
-                'with different type ' + str(self.var_type) +
-                '\n-------------------\n')
-            if ('string' in self.var_type):
-                print('set: ' + self.name + ' = \"' + str(self.expression) + '\";')
+                '\n-------------------\nERROR: re-defining an already declared variable of type ' +
+                f'{declared_MBVars[self.name].var_type}\nwith different type {self.var_type}\n' +
+                '\n-------------------\n'
+            )
+            if 'string' in self.var_type:
+                print(f'set: {self.name} = "{str(self.expression)}";')
             else:
-                print('set: ' + self.name + ' = ' + str(self.expression) + ';')
+                print(f'set: {self.name} = {str(self.expression)};')
         else:
             declared_MBVars[self.name] = self
-            if ('string' in self.var_type):
-                print('set: ' + self.var_type + ' ' + self.name + ' = \"' + str(self.expression) + '\";')
+            if 'string' in self.var_type:
+                print(f'set: {self.var_type} {self.name} = "{str(self.expression)}";')
             else:
-                print('set: ' + self.var_type + ' ' + self.name + ' = ' + str(self.expression) + ';')
-        #globals()[self.name] = self    
-        #__builtins__[self.name] = self    
+                print(f'set: {self.var_type} {self.name} = {str(self.expression)};')
         setattr(builtins, self.name, self)
 
+    def __str__(self):
+        return self.name
+    
+    def __repr__(self):
+        return self.name
 
 class ConstMBVar(MBVar):
-    def __init__(self, name, var_type, value):
-        MBVar.__init__(self, name, 'const ' + var_type, value)
+    def __init__(self, name: str, var_type: str, value: Any):
+        super().__init__(name=name, var_type=f'const {var_type}', expression=value)
+
     def declare(self):
-        #assert self.do_declare == True, (
-        #    '\n-------------------\nERROR:' +
-        #    ' declaring either temporary '
-        #    'or already declared variable:\n\t' + 
-        #    self.var_type + ' ' + self.name + 
-        #    '\n-------------------\n')
-        MBVar.declare(self)
-        #self.do_declare = False
+        super().declare()
         declared_ConstMBVars[self.name] = self
 
-
 class IfndefMBVar(MBVar):
-    def __init__(self, name, var_type, value):
-        if name in declared_MBVars:
-            pass
-        else:
-            MBVar.__init__(self, name, 'ifndef ' + var_type, value)
+    def __init__(self, name: str, var_type: str, value: Any):
+        if name not in declared_MBVars:
+            super().__init__(name=name, var_type=f'ifndef {var_type}', expression=value)
+
 
 class null(MBEntity):
     def __str__(self):
