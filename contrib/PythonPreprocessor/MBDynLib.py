@@ -558,7 +558,12 @@ class Position:
 
 # TODO: Rename to Position when all are moved
 class Position2(MBEntity):
-    relative_position: Union[List[Union[float, MBVar, null, eye]], List[List[Union[float, MBVar, null, eye]]]]
+    """Position definition for MBDyn elements"""
+    
+    model_config = ConfigDict(arbitrary_types_allowed=True)  # Add this line to allow expression type
+    
+    relative_position: Union[List[Union[float, MBVar, null, eye, expression]], 
+                           List[List[Union[float, MBVar, null, eye, expression]]]]
     reference: Union['Reference2', Literal['global', 'node', 'other node', '']]
 
     @field_validator('relative_position', mode='before')
@@ -588,7 +593,7 @@ class Position2(MBEntity):
 
     def iseye(self) -> bool:
         return (self.reference == '') and isinstance(self.relative_position[0], eye)
-
+    
 # TODO: Rename to Reference when all are moved
 class Reference2(MBEntity):
     idx: Union[int, MBVar]
@@ -811,6 +816,8 @@ class Element2(MBEntity):
     Abstract base class for all elements
     """
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     idx: Union[MBVar, int]
     output: Optional[Union[bool, str, int]] = 'yes'
     @field_validator('output')
@@ -852,9 +859,8 @@ class AngularAcceleration(Element2):
     """
     This joint imposes the absolute angular acceleration of a node about a given axis.
     """
-    model_config = {
-        'arbitrary_types_allowed': True
-    }
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     node_label: Union[int, MBVar]
     relative_direction: List[Union[float, MBVar]]
@@ -879,9 +885,8 @@ class AngularVelocity(Element2):
     """
     Represents a joint imposing the absolute angular velocity of a node about a given axis.
     """
-    model_config = {
-        'arbitrary_types_allowed': True
-    }
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     node_label: Union[int, MBVar]
     relative_direction: List[Union[float, MBVar]]
@@ -897,7 +902,8 @@ class AngularVelocity(Element2):
     
     def __str__(self):
         s = f'''{self.element_header()}, angular velocity'''
-        s += f''',\n\t{self.node_label}, {self.relative_direction}'''
+        s += f''',\n\t{self.node_label}, '''
+        s += ', '.join(str(i) for i in self.relative_direction)
         s += f''',\n\t{self.velocity}'''
         s += self.element_footer()
         return s
@@ -906,9 +912,8 @@ class AxialRotation(Element2):
     """
     This joint is equivalent to a revolute hinge, but the angular velocity about axis 3 is imposed by means of the driver.
     """
-    model_config = {
-        'arbitrary_types_allowed': True
-    }
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     node_1_label: Union[int, MBVar]
     position_1: Position2
@@ -1043,6 +1048,46 @@ class Brake(Element2):
         s += f''',\n\t\t{self.friction_model}'''
         s += f''',\n\t\t{self.shape_function}'''
         s += f''',\n\t{self.normal_force}'''
+        s += self.element_footer()
+        return s
+    
+class CardanoHinge2(Element2):
+    '''
+    This joint implements a Cardano's joint, also known as Hooke's joint or Universal joint, which is made
+    of a sequence of two revolute hinges orthogonal to each other, one about relative axis 2 and one about
+    relative axis 3 of the reference systems defined by the two orientation statements. 
+    
+    In other words, this joint constrains the relative axis 3 of node 1 to be always orthogonal to the 
+    relative axis 2 of node 2. As a result, torque is transmitted about axis 1 of both nodes. The relative 
+    position is constrained as well.
+
+    Note: This joint does not represent a constant velocity joint, so, when a steady deflection between 
+    the two nodes is present, a constant velocity about axis 1 of one node results in an oscillating 
+    velocity about axis 1 for the other node.
+    '''
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    node_1_label: Union[int, MBVar]
+    position_1: Position2  # Required according to manual
+    orientation_mat_1: Optional[Union[Position2, list]] = None
+    node_2_label: Union[int, MBVar]
+    position_2: Position2  # Required according to manual
+    orientation_mat_2: Optional[Union[Position2, list]] = None
+
+    def element_type(self):
+        return 'joint'
+
+    def __str__(self):
+        s = f'{self.element_header()}, cardano hinge'
+        s += f',\n\t{self.node_1_label}'
+        s += f',\n\t\tposition, {self.position_1}'
+        if self.orientation_mat_1 is not None:
+            s += f',\n\t\torientation, {self.orientation_mat_1}'
+        s += f',\n\t{self.node_2_label}'
+        s += f',\n\t\tposition, {self.position_2}'
+        if self.orientation_mat_2 is not None:
+            s += f',\n\t\torientation, {self.orientation_mat_2}'
         s += self.element_footer()
         return s
     
@@ -1644,17 +1689,19 @@ class RevoluteHinge(Element2):
         return s
 
 class RevolutePin(Element2):
-    '''
+    """
     This joint only allows the absolute rotation of a node about a given axis, which is axis 3 in the reference
     systems defined by the two orientation statements.
-    '''
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     node_label: Union[int, MBVar]
     relative_offset: Position2
     relative_orientation_mat: Optional[Union[Position2, list]] = None
     absolute_pin_position: Position2
     absolute_pin_orientation_mat: Optional[Union[Position2, list]] = None
-    initial_theta: Optional[Union[float, MBVar]] = None
+    initial_theta: Optional[Union[float, MBVar, expression]] = None
 
     def element_type(self):
         return 'joint'
@@ -1672,7 +1719,7 @@ class RevolutePin(Element2):
             s += f',\n\tinitial theta, {self.initial_theta}'
         s += self.element_footer()
         return s
-
+    
 class RevoluteRotation(Element2):
     '''
     This joint allows the relative rotation of two nodes about a given axis, which is axis 3 in the reference
@@ -1914,6 +1961,8 @@ class SphericalHinge2(Element2):
 
     Note: The orientation matrices are used for output purposes only.
     '''
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     node_1_label: Union[int, MBVar]
     position_1: Optional[Position2] = None
@@ -2796,7 +2845,7 @@ class Beam(Element):
         self.const_laws_orientations = const_laws_orientations
         self.const_laws = const_laws
         self.output = output
-        
+
     def format_const_law(self, cl):
         """Helper method to format constitutive law lists"""
         if isinstance(cl, list):
@@ -3084,6 +3133,9 @@ class DriveCaller2(MBEntity):
 
     The family of the `DriveCaller` object is very large.
     """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     idx: Optional[Union[MBVar, int]] = None
     """Index of this drive to reuse with references"""
 
@@ -4312,9 +4364,9 @@ class SineDriveCaller(DriveCaller):
             self.initial_time = 0.
             pass
         try:
-            assert isinstance(kwargs['angular_velocity'], (Number, MBVar)), (
+            assert isinstance(kwargs['angular_velocity'], (Number, MBVar, expression)), (
                     '\n-------------------\nERROR:' +
-                    ' SineDriveCaller: <angular_velocity> must either be a number or an MBVar' + 
+                    ' SineDriveCaller: <angular_velocity> must be a number, MBVar, or expression' + 
                     '\n-------------------\n'
             )
             self.angular_velocity = kwargs['angular_velocity']
@@ -4325,9 +4377,9 @@ class SineDriveCaller(DriveCaller):
                     '\n-------------------\n'
             )
         try:
-            assert isinstance(kwargs['amplitude'], (Number, MBVar)), (
+            assert isinstance(kwargs['amplitude'], (Number, MBVar, expression)), (
                     '\n-------------------\nERROR:' +
-                    ' SineDriveCaller: <amplitude> must either be a number or an MBVar' + 
+                    ' SineDriveCaller: <amplitude> must be a number, MBVar, or expression' + 
                     '\n-------------------\n'
             )
             self.amplitude = kwargs['amplitude']
@@ -4347,7 +4399,7 @@ class SineDriveCaller(DriveCaller):
         except KeyError:
             errprint(
                     '\n-------------------\nERROR:' +
-                    ' SineDriveCaller: <amplitude> is required' + 
+                    ' SineDriveCaller: <number_of_cycles> is required' + 
                     '\n-------------------\n'
             )
         try:
@@ -4373,7 +4425,7 @@ class SineDriveCaller(DriveCaller):
         s = s + '{}, {}, '.format(self.angular_velocity, self.amplitude)
         s = s + '{}, {}'.format(self.number_of_cycles, self.initial_value)
         return s
-    
+        
 class MeterDriveCaller(DriveCaller):
     type = 'meter'
     def __init__(self, **kwargs):
@@ -7135,6 +7187,7 @@ class ControlData(MBEntity):
     joint_regularizations: Optional[Union[int, str]] = None
     loadable_elements: Optional[Union[int, str]] = None
     output_elements: Optional[Union[int, str]] = None
+    plates: Optional[Union[int, str]] = None # Not present in the manual, but present in CrankPanel_v2.mbd
     solids: Optional[Union[int, str]] = None
     surface_loads: Optional[Union[int, str]] = None
     rigid_bodies: Optional[Union[int, str]] = None
@@ -7241,6 +7294,8 @@ class ControlData(MBEntity):
             s += f'\tloadable elements: {self.loadable_elements};\n'
         if self.output_elements:
             s += f'\toutput elements: {self.output_elements};\n'
+        if self.plates:   # Not present in the manual, but present in CrankPanel_v2.mbd
+            s += f'\tplates: {self.plates};\n'
         if self.solids:
             s += f'\tsolids: {self.solids};\n'
         if self.surface_loads:

@@ -207,6 +207,7 @@ class ControlData(MBEntity):
     joint_regularizations: Optional[Union[int, str]] = None
     loadable_elements: Optional[Union[int, str]] = None
     output_elements: Optional[Union[int, str]] = None
+    plates: Optional[Union[int, str]] = None # Not present in the manual, but present in CrankPanel_v2.mbd
     solids: Optional[Union[int, str]] = None
     surface_loads: Optional[Union[int, str]] = None
     rigid_bodies: Optional[Union[int, str]] = None
@@ -313,6 +314,8 @@ class ControlData(MBEntity):
             s += f'\tloadable elements: {self.loadable_elements};\n'
         if self.output_elements:
             s += f'\toutput elements: {self.output_elements};\n'
+        if self.plates:   # Not present in the manual, but present in CrankPanel_v2.mbd
+            s += f'\tplates: {self.plates};\n'
         if self.solids:
             s += f'\tsolids: {self.solids};\n'
         if self.surface_loads:
