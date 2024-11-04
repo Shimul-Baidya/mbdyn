@@ -6265,16 +6265,18 @@ class Tolerance(MBEntity):
     solution_test: Optional[Literal['none', 'norm', 'minmax']] = None
 
     @field_validator('scaling')
-    def validate_scaling(cls, v):
-        if cls.residual_test is None and v is not None:
+    def validate_scaling(cls, v, info):
+        residual_test = info.data.get('residual_test')
+        if residual_test is None and v is not None:
             raise ValueError("scaling should be None if residual_test is not provided")
-        if v.lower() != 'scale':
+        if v is not None and v.lower() != 'scale':
             raise ValueError("scaling must be a string literal: 'scale'")
-        return v.lower()
-    
+        return v.lower() if v is not None else v
+
     @field_validator('solution_test', mode='before')
-    def validate_solution_test(cls, v):
-        if cls.solution_tolerance is None and v is not None:
+    def validate_solution_test(cls, v, info):
+        solution_tolerance = info.data.get('solution_tolerance')
+        if solution_tolerance is None and v is not None:
             raise ValueError("solution_test should be None if solution_tolerance is not provided")
         return v
 
@@ -6288,6 +6290,7 @@ class Tolerance(MBEntity):
             s += f', {self.solution_tolerance}'
             if self.solution_test is not None:
                 s += f', test, {self.solution_test}'
+        return s
 
 class MaxIterations(MBEntity):
     '''Error out after max_iterations without passing the convergence test. The default value is zero.'''
@@ -6774,31 +6777,31 @@ class LinearSolver(MBEntity):
     def __str__(self):
         s = f'linear solver: {self.solver_name}'
         if self.storage_mode is not None:
-            s += f',\n\t{self.storage_mode}'
+            s += f', {self.storage_mode}'
         if self.ordering is not None:
-            s += f',\n\t{self.ordering}'
+            s += f', {self.ordering}'
         if self.multithread is not None:
-            s += f',\n\t{self.multithread}, {self.threads}'
+            s += f',\n\t\t{self.multithread}, {self.threads}'
         if self.workspace_size is not None:
-            s += f',\n\tworkspace size, {self.workspace_size}'
+            s += f',\n\t\tworkspace size, {self.workspace_size}'
         if self.pivot_factor is not None:
-            s += f',\n\tpivot factor, {self.pivot_factor}'
+            s += f',\n\t\tpivot factor, {self.pivot_factor}'
         if self.drop_tolerance is not None:
-            s += f',\n\tdrop tolerance, {self.drop_tolerance}'
+            s += f',\n\t\tdrop tolerance, {self.drop_tolerance}'
         if self.block_size is not None:
-            s += f',\n\tblock size, {self.block_size}'
+            s += f',\n\t\tblock size, {self.block_size}'
         if self.scale is not None:
-            s += f',\n\tscale, {self.scale}'
+            s += f',\n\t\tscale, {self.scale}'
             if self.scale_tolerance is not None:
-                s += f',\n\t\tscale tolerance, {self.scale_tolerance}'
+                s += f',\n\t\t\tscale tolerance, {self.scale_tolerance}'
             if self.scale_max_iter is not None:
-                s += f',\n\t\tscale iterations, {self.scale_max_iter}'
+                s += f',\n\t\t\tscale iterations, {self.scale_max_iter}'
         if self.refine_tolerance is not None:
-            s += f',\n\ttolerance, {self.refine_tolerance}'
+            s += f',\n\t\ttolerance, {self.refine_tolerance}'
         if self.refine_max_iter is not None:
-            s += f',\n\tmax iterations, {self.refine_max_iter}'
+            s += f',\n\t\tmax iterations, {self.refine_max_iter}'
         if self.preconditioner is not None:
-            s += f',\n\tpreconditioner, {self.preconditioner}'
+            s += f',\n\t\tpreconditioner, {self.preconditioner}'
         return s
     
 class Threads(MBEntity):
@@ -6806,37 +6809,43 @@ class Threads(MBEntity):
     threads: Optional[Union[int, MBVar]] = None
 
     @model_validator(mode='after')
-    def check_threads_provided(cls, values):
-        mode = values.get('mode')
-        threads = values.get('threads')
+    def check_threads_provided(cls, model):
+        mode = model.mode
+        threads = model.threads
 
         if mode in ['assembly', 'solver'] and threads is None:
             raise ValueError("threads must be provided if mode is 'assembly' or 'solver'.")
         elif mode in ['auto', 'disable'] and threads is not None: 
             raise ValueError("threads must be None if mode is 'auto' or 'disable'.")
-        return values
+        return model
     
     def __str__(self):
         s = f'threads: {self.mode}'
         if self.threads:
             s += f', {self.threads}'
         return s
-    
+
 class DerivativesCoefficient(MBEntity):
     coefficient: Optional[Union[float, MBVar]] = None
     is_auto: Optional[bool] = False
     max_iterations: Optional[Union[int, MBVar]] = None
     factor: Optional[Union[float, MBVar]] = None
 
-    @model_validator(mode="before")
-    def validate_auto_case(cls, values):
-        # Check that `factor` and `max_iterations` are only specified when `auto` is true
-        if not values.get("is_auto"):
-            if values.get("coefficient") is None:
+    @model_validator(mode='before')
+    @classmethod
+    def validate_auto_case(cls, data: dict):
+        is_auto = data.get('is_auto', False)  # Default to False if not provided
+        coefficient = data.get('coefficient')
+        factor = data.get('factor')
+        max_iterations = data.get('max_iterations')
+
+        if not is_auto:
+            if coefficient is None:
                 raise ValueError("When 'auto' is not selected, a numeric value for 'coefficient' must be specified.")
-            if values.get("factor") is not None or values.get("max_iterations") is not None:
+            if factor is not None or max_iterations is not None:
                 raise ValueError("`factor` and `max_iterations` can only be specified when 'auto' is selected.")
-        return values
+        
+        return data
 
     def __str__(self):
         s = 'derivatives coefficient: '
@@ -6849,26 +6858,27 @@ class DerivativesCoefficient(MBEntity):
         if self.factor is not None:
             s += f",\n\tfactor, {self.factor}"
         return s
-    
+
+
 class OutputSettings(MBEntity):
     items: List[Literal[
-            "iterations", "residual", "solution", "jacobian matrix", 
-            "messages", "counter", "bailout", "matrix condition number", 
-            "solver condition number", "cpu time", "none"
-        ]]
+        "iterations", "residual", "solution", "jacobian matrix", 
+        "messages", "counter", "bailout", "matrix condition number", 
+        "solver condition number", "cpu time", "none"
+    ]]
 
     # TODO: Have to get a review
     @model_validator(mode="before")
-    def validate_items(cls, values):
-        items = values.get("items")
+    @classmethod
+    def validate_items(cls, data: dict):
+        items = data.get("items", [])
         # Ensure the 'none' keyword is used alone or as the first item
         if "none" in items and items[0] != "none":
             raise ValueError("If 'none' is specified, it must be the first item.")
-        return values
+        return data
 
     def __str__(self):
         return f"output: {', '.join(self.items)}"
-    
 
 class InitialValue(MBEntity):
     '''
@@ -6878,9 +6888,8 @@ class InitialValue(MBEntity):
     '''
 
     # TODO: Remove this relaxed config when all DriveCallers are refactored
-    class Config:
-        arbitrary_types_allowed = True
-        
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     initial_time: Union[float, MBVar]
     final_time: Union[float, MBVar, Literal["forever"]]
     strategy: Optional[Union[StrategyChange, StrategyFactor, StrategyNoChange]] = None
@@ -6900,13 +6909,13 @@ class InitialValue(MBEntity):
     output_settings: Optional[OutputSettings] = None
     output_meter: Optional[Union[DriveCaller, DriveCaller2]] = None
 
-    @field_validator('modify_residual_test', mode='after')
+    @field_validator('modify_residual_test')
     def set_modify_residual_test(cls, v):
-        if isinstance(v, (int, bool)):  # This checks if v is an int or a bool
+        if isinstance(v, (int, bool)):
             if v in [0, False]:
-                return None  # Return None for 0 or False
+                return None
             elif v in [1, True]:
-                return "modify residual test"  # Return specific string for 1 or True
+                return "modify residual test"
             else:
                 raise ValueError("modify_residual_test must be 0, 1, True, or False.")
         else:
@@ -6947,7 +6956,6 @@ class InitialValue(MBEntity):
             s += f"\toutput meter: {self.output_meter};\n"
         s += "end: initial value;\n\n"
         return s
-
 
 # Control Data
 # TODO: Remove these codes as they are temporarily copied here
