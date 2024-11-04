@@ -6801,7 +6801,27 @@ class LinearSolver(MBEntity):
             s += f',\n\tpreconditioner, {self.preconditioner}'
         return s
     
+class Threads(MBEntity):
+    mode: Literal['auto', 'disable', 'assembly', 'solver'] = 'auto'
+    threads: Optional[Union[int, MBVar]] = None
 
+    @model_validator(mode='after')
+    def check_threads_provided(cls, values):
+        mode = values.get('mode')
+        threads = values.get('threads')
+
+        if mode in ['assembly', 'solver'] and threads is None:
+            raise ValueError("threads must be provided if mode is 'assembly' or 'solver'.")
+        elif mode in ['auto', 'disable'] and threads is not None: 
+            raise ValueError("threads must be None if mode is 'auto' or 'disable'.")
+        return values
+    
+    def __str__(self):
+        s = f'threads: {self.mode}'
+        if self.threads:
+            s += f', {self.threads}'
+        return s
+    
 class DerivativesCoefficient(MBEntity):
     coefficient: Optional[Union[float, MBVar]] = None
     is_auto: Optional[bool] = False
@@ -6873,6 +6893,7 @@ class InitialValue(MBEntity):
     method: Optional[Method] = None
     eigenanalysis: Optional[Eigenanalysis] = None
     linear_solver: Optional[LinearSolver] = None
+    threads: Optional[Threads] = None
     derivatives_tolerance: Optional[Union[float, MBVar]] = None
     derivatives_max_iterations: Optional[Union[int, MBVar]] = None
     derivatives_coefficient: Optional[DerivativesCoefficient] = None
@@ -6912,6 +6933,8 @@ class InitialValue(MBEntity):
             s += f"\t{self.eigenanalysis};\n"
         if self.linear_solver:
             s += f"\t{self.linear_solver};\n"
+        if self.threads:
+            s += f"\t{self.threads};\n"
         if self.derivatives_tolerance:
             s += f"\tderivatives tolerance: {self.derivatives_tolerance};\n"
         if self.derivatives_max_iterations:
@@ -6922,7 +6945,7 @@ class InitialValue(MBEntity):
             s += f"\t{self.output_settings};\n"
         if self.output_meter:
             s += f"\toutput meter: {self.output_meter};\n"
-        s += "end: initial value;"
+        s += "end: initial value;\n\n"
         return s
 
 
@@ -7200,5 +7223,5 @@ class ControlData(MBEntity):
         if self.rigid_bodies:
             s += f'\trigid bodies: {self.rigid_bodies};\n'
 
-        s += 'end: control data;'
+        s += 'end: control data;\n\n'
         return s

@@ -320,5 +320,5 @@ class ControlData(MBEntity):
         if self.rigid_bodies:
             s += f'\trigid bodies: {self.rigid_bodies};\n'
 
-        s += 'end: control data;'
+        s += 'end: control data;\n\n'
         return s
