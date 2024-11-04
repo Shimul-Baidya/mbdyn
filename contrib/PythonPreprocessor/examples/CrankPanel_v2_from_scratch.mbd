@@ -1,0 +1,326 @@
+#beginpreprocess
+from __future__ import print_function, division
+from MBDynLib import *
+
+
+
+
+# Data section
+data = Data(problem="initial value")
+print(f'{data}\n')
+
+
+
+
+
+# Initial Value section
+method_instance = MS(differential_radius=ConstDriveCaller(const_value=0.6))
+
+tolerance_instance = Tolerance(
+    residual_tolerance=1.E-1
+)
+
+max_iterations_instance = MaxIterations(
+    max_iterations=10
+)
+
+linear_solver_instance = LinearSolver(
+    solver_name='umfpack',
+    storage_mode='cc'
+)
+
+threads_instance = Threads(
+    mode='disable'
+)
+
+output_settings_instance = OutputSettings(
+    items=["iterations"]
+)
+
+initial_value_instance = InitialValue(
+    initial_time=0.,
+    final_time=0.4,
+    time_step=3.e-4,
+    tolerance=tolerance_instance,
+    max_iterations=max_iterations_instance,
+    output_settings=output_settings_instance,
+    derivatives_tolerance=1e6,
+    linear_solver=linear_solver_instance,
+    threads=threads_instance,
+    method=method_instance,
+)
+print(f'{initial_value_instance}\n')
+
+
+
+
+
+ConstMBVar('T', 'real', 0.2)
+
+ConstMBVar('NX', 'integer', 4)
+ConstMBVar('NY', 'integer', 4)
+ConstMBVar('NC', 'integer', 2)
+ConstMBVar('NP', 'integer', 4)
+n_dynamic_nodes = (NX + 1) * (NY + 1)
+n_static_nodes = 2
+nshells = NX * NY
+nbeams = NY
+nels = nshells + nbeams + 3 + NY
+nbodies = nshells * 4 + nbeams * 2
+
+ConstMBVar('L','real', 1.)
+ConstMBVar('t','real', 15.E-3)
+ConstMBVar('Lc','real', 0.25)
+ConstMBVar('Lp','real', 1.)
+
+ConstMBVar('acpr', 'real', 0.04)
+ConstMBVar('arr1', 'real', 0.06)
+ConstMBVar('arr2', 'real', 0.03)
+ConstMBVar('Acpr', 'real', acpr * acpr)
+ConstMBVar('Arr1', 'real', arr1 * arr1)
+ConstMBVar('Arr2', 'real', arr2 * arr2)
+#J = ConstMBVar('J', 'real', '1. / 12 * a^4') #DOES NOT WORK WHEN I DEFINE EJ = E * J
+ConstMBVar('Jcpr', 'real', 1. / 12 * pow(acpr, 4))
+ConstMBVar('Jrr1', 'real', 1. / 12 * pow(arr1, 4))
+ConstMBVar('Jrr2', 'real', 1. / 12 * pow(arr2, 4))
+
+ConstMBVar('E','real', 73.E9)
+ConstMBVar('nu','real', 0.3)
+ConstMBVar('G','real', E/2/(1.+nu))
+ConstMBVar('rho','real', 2700)
+
+ConstMBVar('EAcpr', 'real', E * Acpr)
+ConstMBVar('EJcpr', 'real', E * Jcpr)
+ConstMBVar('GJcpr', 'real', G * 2.25 / 16. * Acpr * Acpr)
+ConstMBVar('kGAcpr', 'real', 0.6 * G * Acpr)
+ConstMBVar('EArr1', 'real', E * Arr1)
+ConstMBVar('EJrr1', 'real', E * Jrr1)
+ConstMBVar('GJrr1', 'real', G * 2.25 / 16. * Arr1 * Arr1)
+ConstMBVar('kGArr1', 'real', 0.6 * G * Arr1)
+ConstMBVar('EArr2', 'real', E * Arr2)
+ConstMBVar('EJrr2', 'real', E * Jrr2)
+ConstMBVar('GJrr2', 'real', G * 2.25 / 16. * Arr2 * Arr2)
+ConstMBVar('kGArr2', 'real', 0.6 * G * Arr2)
+pi = 3.14159
+
+
+RelNodeNull = Position('', null())
+RelNodeEye = Position('', eye())
+BeamOrientationrr = Position('', [1, 0., 1., 0., 2, 1., 0., 0.])
+BeamOrientationcr = Position('', [1, 1., 0., 0., 2, 0., 1., 0.])
+BeamOrientationpr = Position('', [1, 0., 0., 1., 2, 1., 0., 0.])
+
+ConstMBVar('JDX', 'integer',       1)
+ConstMBVar('IDX', 'integer',     100)
+ConstMBVar('IDX1', 'integer',  1000)
+ConstMBVar('IDX2', 'integer',  2000)
+ConstMBVar('IDXc', 'integer',  4000)
+ConstMBVar('IDXp', 'integer',  5000)
+ConstMBVar('IDX3', 'integer', 10000)
+ConstMBVar('IDX4', 'integer', 11000)
+
+nodes = []
+bodies = []
+joints = []
+shells = []
+beams = []
+
+
+
+
+
+# Control Data Section
+# Create Print instance for dof description
+print_instance = Print(
+    items=["dof description"]
+)
+
+# Create ControlData instance
+control_data_instance = ControlData(
+    structural_nodes=f"(NX + 1) * (NY + 1) + (NP + 1) + (NC + 1)",
+    beams=f"2 * NY + NP + NC",
+    plates=f"NX * NY",
+    joints="3 + 1 + 1 + 1",
+    rigid_bodies=f"NX * NY * 4 + 2 * NY + 2 * NY + 2 * NP + 2 * NC",
+    print=print_instance
+)
+
+print(f"{control_data_instance}\n")
+
+
+
+
+
+
+for i in range(NX+1):
+	for j in range(NY+1):
+		x = L / NX * i
+		y = L / NY * j
+		z = 0.
+		nodes.append(DynamicNode(IDX + (NY + 1) * i + j, Position('', [x, y, z]), RelNodeEye, RelNodeNull, RelNodeNull))
+
+for i in range(NC+1):
+	x = L - Lc + Lc / NC * i
+	y = 0.
+	z = -Lp
+	nodes.append(DynamicNode(IDXc + i, Position('', [x, y, z]), RelNodeEye, RelNodeNull, RelNodeNull))
+
+for i in range(NP+1):
+	x = L
+	y = 0.
+	z = -Lp + Lp / NP * i
+	nodes.append(DynamicNode(IDXp + i, Position('', [x, y, z]), RelNodeEye, RelNodeNull, RelNodeNull))
+
+
+for i in range(NX):
+	for j in range(NY):
+		shells.append(Shell('shell4easans', IDX + NY * i + j, 
+			[IDX + (NY + 1) * i + j, IDX + (NY + 1) * i + j + 1, IDX + (NY + 1) * (i + 1) + j + 1, IDX + (NY + 1) * (i + 1) + j], 
+			['isotropic', 'E', E, 'nu', nu, 'thickness', t]))
+
+elastic_beam_rr1 = ['linear elastic generic', 'diag', EArr1, kGArr1, kGArr1, GJrr1, EJrr1, EJrr1]
+elastic_beam_rr2 = ['linear elastic generic', 'diag', EArr2, kGArr2, kGArr2, GJrr2, EJrr2, EJrr2]
+for j in range(NY):
+	beams.append(Beam(IDX1 + j, [IDX + j, IDX + j + 1], [RelNodeNull, RelNodeNull], [RelNodeEye, RelNodeEye],
+	[BeamOrientationrr], [elastic_beam_rr1]))
+	for i in range(2):
+		bodies.append(Body(IDX3 + IDX2 * j  + i, beams[len(beams)-1].nodes[i], Arr1 * rho * L / NY / 2, RelNodeNull, ['diag', 0., 0., 0.]))
+	beams.append(Beam(IDX2 + j, [IDX + NX * (NY + 1) + j, IDX + NX * (NY + 1) + j + 1], [RelNodeNull, RelNodeNull], [RelNodeEye, RelNodeEye],
+	[BeamOrientationrr], [elastic_beam_rr2]))
+	for i in range(2):
+		bodies.append(Body(IDX3 + IDX2 * j  + 2 + i, beams[len(beams)-1].nodes[i], Arr2 * rho * L / NY / 2, RelNodeNull, ['diag', 0., 0., 0.]))
+
+elastic_beam_cpr = ['linear elastic generic', 'diag', EAcpr, kGAcpr, kGAcpr, GJcpr, EJcpr, EJcpr]
+for j in range(NC):
+	beams.append(Beam(IDXc + j, [IDXc + j, IDXc + j + 1], [RelNodeNull, RelNodeNull], [RelNodeEye, RelNodeEye],
+	[BeamOrientationcr], [elastic_beam_cpr]))
+	for i in range(2):
+		bodies.append(Body(IDX3 + IDX2 * j  + 4 + i, beams[len(beams)-1].nodes[i], Acpr * rho * Lc / NC / 2, RelNodeNull, ['diag', 0., 0., 0.]))
+for j in range(NP):
+	beams.append(Beam(IDXp + j, [IDXp + j, IDXp + j + 1], [RelNodeNull, RelNodeNull], [RelNodeEye, RelNodeEye],
+	[BeamOrientationpr], [elastic_beam_cpr]))
+	for i in range(2):
+		bodies.append(Body(IDX3 + IDX2 * j  + 6 + i, beams[len(beams)-1].nodes[i], Acpr * rho * Lp / NP / 2, RelNodeNull, ['diag', 0., 0., 0.]))
+
+for i in range(len(shells)):
+	for j in range(4):
+		bodies.append(Body(
+		IDX2 * j + i, shells[i].nodes[j], L * L * t * rho / (NX * NX) / 4, RelNodeNull, ['diag', 0., 0., 0.]))
+
+
+
+
+print('begin: nodes;')
+[print(d) for d in nodes]
+print('end: nodes;')
+
+
+
+
+
+print('begin: elements;')
+[print(d) for d in bodies]
+[print(d) for d in joints]
+
+
+ref_node_null = Position2(reference="node", relative_position=null())
+eye_pos = Position2(reference="", relative_position=eye())
+
+# First revolute pin
+revolute_pin1 = RevolutePin(
+    idx=JDX,
+    node_label=IDX + (NY + 1) * 0 + 0,
+    relative_offset=ref_node_null,
+    relative_orientation_mat=Position2(reference="", relative_position=[1, 0., 0., 1., 2, 1., 0., 0.]),
+    absolute_pin_position=Position2(reference="", relative_position=[0.0, 0.0, 0.0]),
+    absolute_pin_orientation_mat=Position2(reference="", relative_position=[1, 0., 0., 1., 2, 1., 0., 0.])
+)
+
+
+# Second revolute pin  
+revolute_pin2 = RevolutePin(
+    idx=JDX + 1,
+    node_label=IDX + (NY + 1) * 0 + NY,
+    relative_offset=ref_node_null,
+    relative_orientation_mat=Position2(reference="", relative_position=[1, 0., 0., 1., 2, 1., 0., 0.]),
+    absolute_pin_position=Position2(reference="", relative_position=[0.0, L, 0.0]),
+    absolute_pin_orientation_mat=Position2(reference="", relative_position=[1, 0., 0., 1., 2, 1., 0., 0.])
+)
+
+
+# Spherical hinge
+spherical_hinge = SphericalHinge2(
+    idx=JDX + 2,
+    node_1_label=IDX + (NY + 1) * NX,
+    position_1=ref_node_null,
+    node_2_label=IDXp + NP,
+    position_2=ref_node_null
+)
+
+
+
+# Cardano hinge
+cardano_hinge = CardanoHinge2(
+    idx=JDX + 3,
+    node_1_label=IDXc + NC,
+    position_1=ref_node_null,
+    orientation_mat_1=Position2(reference="", relative_position=[1, 1., 0., 0., 2, 0., 0., 1.]),
+    node_2_label=IDXp + 0,
+    position_2=ref_node_null,
+    orientation_mat_2=Position2(reference="", relative_position=[1, 0., 0., 1, 2, 1., 0., 0.])
+)
+
+
+# Final revolute pin
+revolute_pin3 = RevolutePin(
+    idx=JDX + 4,
+    node_label=IDXc + 0,
+    relative_offset=ref_node_null,
+    relative_orientation_mat=Position2(reference="", relative_position=[1, 0., 0., 1., 2, 1., 0., 0.]),
+    absolute_pin_position=Position2(reference="", relative_position=[L - Lc, 0.0, -Lp]),
+    absolute_pin_orientation_mat=Position2(reference="", relative_position=[1, 0., 0., 1., 2, 1., 0., 0.])
+)
+
+
+# Angular velocity joint
+sine_drive = SineDriveCaller(
+    idx=-1,  # No reference needed
+    initial_time=0.0,
+    angular_velocity=pi/T,
+    amplitude=-pi/4.0 * pi/T,
+    number_of_cycles="one",
+    initial_value=0.0
+)
+
+angular_velocity = AngularVelocity(
+    idx=JDX + 5,
+    node_label=IDXc,
+    relative_direction=[0.0, 1.0, 0.0], 
+    velocity=sine_drive
+)
+
+print(revolute_pin1)
+print(revolute_pin2)
+print(spherical_hinge)
+print(cardano_hinge)
+print(revolute_pin3)
+print(angular_velocity)
+
+[print(d) for d in shells]
+[print(d) for d in beams]
+
+print('end: elements;')
+
+#endpreprocess
+
+# vim:ft=mbd
+
+
+
+
+
+
+
+
+
+
