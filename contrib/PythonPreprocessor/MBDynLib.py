@@ -2796,13 +2796,20 @@ class Beam(Element):
         self.const_laws_orientations = const_laws_orientations
         self.const_laws = const_laws
         self.output = output
+        
+    def format_const_law(self, cl):
+        """Helper method to format constitutive law lists"""
+        if isinstance(cl, list):
+            return ', '.join(str(x) for x in cl)
+        return str(cl)
+
     def __str__(self):
         s = str(self.type) + ': ' + str(self.idx)
         for (node, position, orientation) in zip(self.nodes, self.positions, self.orientations):
             s = s + ',\n\t' + str(node) + ',\n\t\tposition, ' + str(position) + ',\n\t\torientation, ' + str(orientation)
         for (cl_or, cl) in zip(self.const_laws_orientations, self.const_laws):
             s = s + ',\n\t' + str(cl_or) + ',\n\t'
-            s += str(cl)
+            s += self.format_const_law(cl)
         if self.output != 'yes':
             s = s + ',\n\toutput, ' + str(self.output)
         s = s + ';\n'
