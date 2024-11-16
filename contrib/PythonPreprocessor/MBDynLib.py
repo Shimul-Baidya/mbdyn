@@ -102,6 +102,7 @@ except ImportError:
 
     field_validator = identity_decorator
     model_validator = identity_decorator
+    validate_call = identity_decorator
 
 
 class MBEntity(_EntityBase, ABC):
