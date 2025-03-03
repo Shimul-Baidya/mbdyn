@@ -1,9 +1,9 @@
 from abc import ABC
-from typing import List, Optional
+from typing import List, Optional, Annotated
 from MBDynLib import *
 
 if imported_pydantic:
-    from pydantic import BaseModel, ConfigDict, field_validator, validate_call
+    from pydantic import BaseModel, ConfigDict, field_validator, validate_call, Field
 else:
     class BaseModel:
         """Placeholder for when pydantic is not available"""
@@ -31,19 +31,16 @@ class MBDynModel(MBEntity):
     data: Data
     problem: InitialValue  
     control_data: ControlData
-    nodes: List[Union[Node, Node2]]
-    drivers: Optional[List[FileDriver]] = None
-    elements: List[Union[Element, Element2]]
+    nodes: Annotated[List, Field(arbitrary_type_allowed=True)] #TODO: Replace with proper typing once migration to Node2 is complete
+    drivers: Optional[List[FileDriver]] = []
+    elements: Annotated[List, Field(arbitrary_type_allowed=True)] #TODO: Replace with proper typing once migration to Element2 is complete
     
-    @validate_call
     def add_node(self, node: Union[Node, Node2]) -> None:
         self.nodes.append(node)
 
-    @validate_call
     def add_driver(self, driver: FileDriver) -> None:
         self.drivers.append(driver)
 
-    @validate_call    
     def add_element(self, element: Union[Element, Element2]) -> None:
         self.elements.append(element)
 

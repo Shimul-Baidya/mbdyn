@@ -6189,7 +6189,7 @@ class FixedStep(FileDriver):
         base_str += f'time step, {self.time_step},\n\t'
         if self.interpolation:
             base_str += f'interpolation, {self.interpolation.value},\n\t'
-        if self.pad_zeroes and self.bailout:
+        if self.pad_zeroes == FixedStep.PadZeroesType.NO and self.bailout:
             raise ValueError("Cannot set both 'pad zeroes' to 'no' and 'bailout' at the same time")
         if self.pad_zeroes:
             base_str += f'pad zeroes, {self.pad_zeroes},\n\t'
@@ -6198,7 +6198,7 @@ class FixedStep(FileDriver):
         base_str += f'"{self.file_name}"'
         return base_str
     
-class VariableStep(FixedStep):
+class VariableStep(FileDriver):
     """
     Variable Step file driver
     """
@@ -6217,7 +6217,7 @@ class VariableStep(FixedStep):
         base_str += f'{self.channels_number},\n\t'
         if self.interpolation:
             base_str += f'interpolation, {self.interpolation.value},\n\t'
-        if self.pad_zeroes and self.bailout:
+        if self.pad_zeroes == FixedStep.PadZeroesType.NO and self.bailout:
             raise ValueError("Cannot set both 'pad zeroes' to 'no' and 'bailout' at the same time")
         if self.pad_zeroes:
             base_str += f'pad zeroes, {self.pad_zeroes},\n\t'
