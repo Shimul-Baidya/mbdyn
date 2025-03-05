@@ -3154,34 +3154,48 @@ class DriveCaller2(MBEntity):
         else:
             return self.drive_type()
 
-class ArrayDriveCaller(DriveCaller):
-    type = 'array'
-    def __init__(self, *args, **kwargs):
-        for arg in args:
-            assert isinstance(arg, DriveCaller), (
-                    '\n-------------------\nERROR:' +
-                    ' ArrayDriveCaller: each argument of constructor must be' + 
-                    ' a DriveCaller instance' + 
-                    '\n-------------------\n')
-        self.drives = args
-        try:
-            assert isinstance(kwargs['idx'], (Integral, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' ArrayDriveCaller: <idx> must either be an integer value or an MBVar' + 
-                    '\n-------------------\n')
-            self.idx = kwargs['idx']
-        except KeyError:
-            pass
+class ArrayDriveCaller(DriveCaller2):
+    '''
+    this is simply a front-end for the linear combination of <len(drives)> normal drives. <len(drives)> must be
+    at least 1, in which case a simple drive caller is created, otherwise an array of drive callers is created and
+    at every call their value is added to give the ﬁnal value of the array drive
+    '''
+
+    drives: List[Union[DriveCaller, DriveCaller2]]  #TODO: Remove DriveCaller2 when all are moved
+    """List of drive callers to be used in the array"""
+
+    @field_validator('drives')
+    def validate_drives_not_empty(cls, v):
+        """Validate that drives contains at least one drive caller"""
+        if len(v) < 1:
+            raise ValueError("array drive must contain at least one drive caller")
+        return v
+
+    def drive_type(self) -> str:
+        return 'array'
+    
     def __str__(self):
-        s = ''
-        if self.idx >= 0:
-            s = s + 'drive caller: {}, '.format(self.idx)
-        s = s + '{},'.format(self.type)
+        return self._str_with_indent()
+        
+    def _str_with_indent(self, indent=""):
+        """Helper method to handle indentation for nested arrays"""
+        # Base string with appropriate indentation for current level
+        s = self.drive_header()
+        s += f", {len(self.drives)}"
+        # Add each drive with appropriate indentation
         for drive in self.drives:
-            if drive.idx < 0:
-                s = s + '\n\t{}'.format(drive)
+            if hasattr(drive, 'idx') and drive.idx is not None and drive.idx >= 0:
+                s += f",\n{indent}\treference, {drive.idx}"
+            elif isinstance(drive, ArrayDriveCaller):
+                # For nested ArrayDriveCaller, increase indentation
+                nested_str = drive._str_with_indent(indent + "\t")
+                # Remove the header part before including
+                if drive.idx is not None and drive.idx >= 0:
+                    nested_str = nested_str.replace(f"drive caller: {drive.idx}, ", "")
+                nested_str = nested_str.replace(f"{drive.drive_type()}", f"{indent}\t{drive.drive_type()}")
+                s += f",\n{nested_str}"
             else:
-                s = s + '\n\treference, {}'.format(drive.idx)
+                s += f",\n{indent}\t{drive}"
         return s
 
 class BistopDriveCaller(DriveCaller):

@@ -26,6 +26,95 @@ def patched_errprint(*args, **kwargs):
 l.errprint = patched_errprint
 
 
+class TestArrayDriveCaller(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        # Create sample drive callers for testing
+        self.const_drive1 = l.ConstDriveCaller(const_value=42)
+        self.const_drive2 = l.ConstDriveCaller(const_value=10)
+        self.const_drive_with_idx = l.ConstDriveCaller(idx=5, const_value=20)
+
+    def test_array_drive_caller_creation_valid(self):
+        """Test that ArrayDriveCaller works with valid input"""
+        # Create with two drives without idx
+        array_drive = l.ArrayDriveCaller(drives=[self.const_drive1, self.const_drive2])
+        self.assertIsInstance(array_drive, l.ArrayDriveCaller)
+        self.assertEqual(len(array_drive.drives), 2)
+        self.assertEqual(array_drive.drives[0], self.const_drive1)
+        self.assertEqual(array_drive.drives[1], self.const_drive2)
+        
+        # Create with a mix of drives with and without idx
+        array_drive = l.ArrayDriveCaller(drives=[self.const_drive1, self.const_drive_with_idx])
+        self.assertIsInstance(array_drive, l.ArrayDriveCaller)
+        self.assertEqual(len(array_drive.drives), 2)
+        
+        # Create with specific idx for the array
+        array_drive = l.ArrayDriveCaller(idx=10, drives=[self.const_drive1, self.const_drive2])
+        self.assertIsInstance(array_drive, l.ArrayDriveCaller)
+        self.assertEqual(array_drive.idx, 10)
+        
+        # Create with single drive (minimum required)
+        array_drive = l.ArrayDriveCaller(drives=[self.const_drive1])
+        self.assertIsInstance(array_drive, l.ArrayDriveCaller)
+        self.assertEqual(len(array_drive.drives), 1)
+
+    def test_array_drive_caller_str_representation(self):
+        """Test the string representation of ArrayDriveCaller"""
+        # Test without idx
+        array_drive = l.ArrayDriveCaller(drives=[self.const_drive1, self.const_drive2])
+        expected_str = "array, 2,\n\tconst, 42,\n\tconst, 10"
+        self.assertEqual(str(array_drive), expected_str)
+        
+        # Test with idx
+        array_drive = l.ArrayDriveCaller(idx=10, drives=[self.const_drive1, self.const_drive2])
+        expected_str = "drive caller: 10, array, 2,\n\tconst, 42,\n\tconst, 10"
+        self.assertEqual(str(array_drive), expected_str)
+        
+        # Test with a mix of drives with and without idx
+        array_drive = l.ArrayDriveCaller(drives=[self.const_drive1, self.const_drive_with_idx])
+        expected_str = "array, 2,\n\tconst, 42,\n\treference, 5"
+        self.assertEqual(str(array_drive), expected_str)
+        
+        # Test with single drive
+        array_drive = l.ArrayDriveCaller(drives=[self.const_drive1])
+        expected_str = "array, 1,\n\tconst, 42"
+        self.assertEqual(str(array_drive), expected_str)
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_array_drive_caller_missing_required_field(self):
+        """Test creating an ArrayDriveCaller instance missing a required field (drives)"""
+        with self.assertRaises(Exception):
+            l.ArrayDriveCaller(idx=10)  # Missing drives field
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_array_drive_caller_empty_drives(self):
+        """Test creating an ArrayDriveCaller with an empty drives list, which should fail"""
+        with self.assertRaises(ValueError) as context:
+            l.ArrayDriveCaller(drives=[])
+        self.assertIn("array drive must contain at least one drive caller", str(context.exception))
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_array_drive_caller_invalid_drives_type(self):
+        """Test invalid type for drives field"""
+        with self.assertRaises(Exception):
+            l.ArrayDriveCaller(drives="not a list")  # Should be a list
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_array_drive_caller_invalid_drive_items(self):
+        """Test invalid items in drives list"""
+        with self.assertRaises(Exception):
+            l.ArrayDriveCaller(drives=[self.const_drive1, "not a drive"])  # One item is not a DriveCaller
+
+    def test_array_drive_caller_nested(self):
+        """Test creating a nested ArrayDriveCaller"""
+        inner_array = l.ArrayDriveCaller(drives=[self.const_drive1, self.const_drive2])
+        outer_array = l.ArrayDriveCaller(drives=[inner_array, self.const_drive_with_idx])
+        self.assertIsInstance(outer_array, l.ArrayDriveCaller)
+        self.assertEqual(len(outer_array.drives), 2)
+        self.assertIsInstance(outer_array.drives[0], l.ArrayDriveCaller)
+        expected_str = "array, 2,\n\tarray, 2,\n\t\tconst, 42,\n\t\tconst, 10,\n\treference, 5"
+        self.assertEqual(str(outer_array), expected_str)
+
 class TestConstDrive(unittest.TestCase):
     def test_const_drive_caller(self):
         """Check that the new module can be used the same way as the current one"""

@@ -281,8 +281,7 @@ revolute_pin3 = RevolutePin(
     absolute_pin_orientation_mat=Position2(reference="", relative_position=[1, 0., 0., 1., 2, 1., 0., 0.])
 )
 
-
-# Angular velocity joint
+# Sine Drive Caller
 sine_drive = SineDriveCaller(
     idx=-1,  # No reference needed
     initial_time=0.0,
@@ -292,6 +291,7 @@ sine_drive = SineDriveCaller(
     initial_value=0.0
 )
 
+# Angular velocity joint
 angular_velocity = AngularVelocity(
     idx=JDX + 5,
     node_label=IDXc,
