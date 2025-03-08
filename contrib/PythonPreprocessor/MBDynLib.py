@@ -3198,58 +3198,88 @@ class ArrayDriveCaller(DriveCaller2):
                 s += f",\n{indent}\t{drive}"
         return s
 
-class BistopDriveCaller(DriveCaller):
-    type = 'bistop'
-    def __init__(self, **kwargs):
-        try:
-            if kwargs['initial_status'] in ['active', 'inactive']:
-                self.initial_status = kwargs['initial status']
-            else:
-                raise ValueError(
-                        '\n------------------\nERROR:' + 
-                        ' BistopDriveCaller: <initial_status> must be' + 
-                        ' either \'active\' or \'inactive\'' + 
-                        '\n------------------\n')
-        except KeyError:
-            self.initial_status = 'active'
-            pass
-        try:
-            assert isinstance(kwargs['idx'], (Integral, MBVar)), (
-                    '\n-------------------\nERROR:' +
-                    ' BistopDriveCaller: <idx> must either be an integer value or an MBVar' + 
-                    '\n-------------------\n')
-            self.idx = kwargs['idx']
-        except KeyError:
-            pass
-        assert isinstance(kwargs['activation_condition'], DriveCaller), (
-                '\n-------------------\nERROR:' +
-                ' BistopDriveCaller: <activation_condition> must be' + 
-                ' a DriveCaller instance' + 
-                '\n-------------------\n')
-
-        assert isinstance(kwargs['deactivation_condition'], DriveCaller), (
-                '\n-------------------\nERROR:' +
-                ' BistopDriveCaller: <deactivation_condition> must be' + 
-                ' a DriveCaller instance' + 
-                '\n-------------------\n')
-        self.activation_condition = kwargs['activation_condition']
-        self.deactivation_condition = kwargs['deactivation_condition']
+class BistopDriveCaller(DriveCaller2):
+    '''
+    This drive caller returns 1.0 (TRUE) when its status is active and 0.0 (FALSE) when it is inactive.
+    When in inactive status, it turns to active if the activation_condition is TRUE. When in active
+    status, it turns to inactive if the deactivation_condition is TRUE.
+    This drive caller is useful to implement a “robust” and irreversible status change
+    '''
+    
+    initial_status: Optional[Literal['active', 'inactive']] = 'active'
+    activation_condition: DriveCaller2 
+    deactivation_condition: DriveCaller2
+    
+    def drive_type(self) -> str:
+        return 'bistop'
+    
     def __str__(self):
-        s = ''
-        if self.idx >= 0:
-            s = s + 'drive caller: {}, '.format(self.idx)
-        s = s + '{},\n\tinitial status, {},'.format(self.type, self.initial_status)
-        s = s + '\n\t# activation condition drive'
-        if self.activation_condition.idx < 0:
-            s = s + '\n\t{}'.format(self.activation_condition)
+        s = f'{self.drive_header()}'
+        s += f',\n\tinitial status, {self.initial_status},'
+        s += '\n\t# activation condition drive'
+        if self.activation_condition.idx is not None and self.activation_condition.idx >= 0:
+            s += f'\n\treference, {self.activation_condition.idx}'
         else:
-            s = s + '\n\treference, {}'.format(self.activation_condition.idx)
-        s = s + '\n\t# deactivation condition drive'
-        if self.deactivation_condition.idx < 0:
-            s = s + '\n\t{}'.format(self.deactivation_condition)
+            s += f'\n\t{self.activation_condition}'
+        s += '\n\t# deactivation condition drive'
+        if self.deactivation_condition.idx is not None and self.deactivation_condition.idx >= 0:
+            s += f'\n\treference, {self.deactivation_condition.idx}'
         else:
-            s = s + '\n\treference, {}'.format(self.deactivation_condition.idx)
+            s += f'\n\t{self.deactivation_condition}'
         return s
+    
+# class BistopDriveCaller(DriveCaller):
+#     type = 'bistop'
+#     def __init__(self, **kwargs):
+#         try:
+#             if kwargs['initial_status'] in ['active', 'inactive']:
+#                 self.initial_status = kwargs['initial status']
+#             else:
+#                 raise ValueError(
+#                         '\n------------------\nERROR:' + 
+#                         ' BistopDriveCaller: <initial_status> must be' + 
+#                         ' either \'active\' or \'inactive\'' + 
+#                         '\n------------------\n')
+#         except KeyError:
+#             self.initial_status = 'active'
+#             pass
+#         try:
+#             assert isinstance(kwargs['idx'], (Integral, MBVar)), (
+#                     '\n-------------------\nERROR:' +
+#                     ' BistopDriveCaller: <idx> must either be an integer value or an MBVar' + 
+#                     '\n-------------------\n')
+#             self.idx = kwargs['idx']
+#         except KeyError:
+#             pass
+#         assert isinstance(kwargs['activation_condition'], DriveCaller), (
+#                 '\n-------------------\nERROR:' +
+#                 ' BistopDriveCaller: <activation_condition> must be' + 
+#                 ' a DriveCaller instance' + 
+#                 '\n-------------------\n')
+
+#         assert isinstance(kwargs['deactivation_condition'], DriveCaller), (
+#                 '\n-------------------\nERROR:' +
+#                 ' BistopDriveCaller: <deactivation_condition> must be' + 
+#                 ' a DriveCaller instance' + 
+#                 '\n-------------------\n')
+#         self.activation_condition = kwargs['activation_condition']
+#         self.deactivation_condition = kwargs['deactivation_condition']
+#     def __str__(self):
+#         s = ''
+#         if self.idx >= 0:
+#             s = s + 'drive caller: {}, '.format(self.idx)
+#         s = s + '{},\n\tinitial status, {},'.format(self.type, self.initial_status)
+#         s = s + '\n\t# activation condition drive'
+#         if self.activation_condition.idx < 0:
+#             s = s + '\n\t{}'.format(self.activation_condition)
+#         else:
+#             s = s + '\n\treference, {}'.format(self.activation_condition.idx)
+#         s = s + '\n\t# deactivation condition drive'
+#         if self.deactivation_condition.idx < 0:
+#             s = s + '\n\t{}'.format(self.deactivation_condition)
+#         else:
+#             s = s + '\n\treference, {}'.format(self.deactivation_condition.idx)
+#         return s
 
 
 class ConstDriveCaller(DriveCaller2):

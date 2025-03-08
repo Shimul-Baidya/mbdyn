@@ -115,6 +115,148 @@ class TestArrayDriveCaller(unittest.TestCase):
         expected_str = "array, 2,\n\tarray, 2,\n\t\tconst, 42,\n\t\tconst, 10,\n\treference, 5"
         self.assertEqual(str(outer_array), expected_str)
 
+
+class TestBistopDriveCaller(unittest.TestCase):
+    def setUp(self):
+        """Set up test fixtures before each test method."""
+        # Create sample drive callers for testing
+        self.const_drive1 = l.ConstDriveCaller(const_value=1.0)
+        self.const_drive2 = l.ConstDriveCaller(const_value=0.0)
+        self.const_drive_with_idx = l.ConstDriveCaller(idx=5, const_value=0.5)
+
+    def test_bistop_drive_caller_creation_valid(self):
+        """Test that BistopDriveCaller works with valid inputs"""
+        # Default initial_status
+        bistop_drive = l.BistopDriveCaller(
+            activation_condition=self.const_drive1,
+            deactivation_condition=self.const_drive2
+        )
+        self.assertIsInstance(bistop_drive, l.BistopDriveCaller)
+        self.assertEqual(bistop_drive.initial_status, 'active')
+        self.assertEqual(bistop_drive.activation_condition, self.const_drive1)
+        self.assertEqual(bistop_drive.deactivation_condition, self.const_drive2)
+        
+        # With explicit initial_status
+        bistop_drive = l.BistopDriveCaller(
+            initial_status='inactive',
+            activation_condition=self.const_drive1,
+            deactivation_condition=self.const_drive2
+        )
+        self.assertEqual(bistop_drive.initial_status, 'inactive')
+        
+        # With idx
+        bistop_drive = l.BistopDriveCaller(
+            idx=10,
+            activation_condition=self.const_drive1,
+            deactivation_condition=self.const_drive2
+        )
+        self.assertEqual(bistop_drive.idx, 10)
+
+    def test_bistop_drive_caller_str_representation(self):
+        """Test the string representation of BistopDriveCaller"""
+        # Without idx, with default initial_status
+        bistop_drive = l.BistopDriveCaller(
+            activation_condition=self.const_drive1,
+            deactivation_condition=self.const_drive2
+        )
+        expected_str = "bistop,\n\tinitial status, active,\n\t# activation condition drive\n\tconst, 1.0\n\t# deactivation condition drive\n\tconst, 0.0"
+        self.assertEqual(str(bistop_drive), expected_str)
+        
+        # With idx
+        bistop_drive = l.BistopDriveCaller(
+            idx=10,
+            activation_condition=self.const_drive1,
+            deactivation_condition=self.const_drive2
+        )
+        expected_str = "drive caller: 10, bistop,\n\tinitial status, active,\n\t# activation condition drive\n\tconst, 1.0\n\t# deactivation condition drive\n\tconst, 0.0"
+        self.assertEqual(str(bistop_drive), expected_str)
+        
+        # With reference drive callers
+        bistop_drive = l.BistopDriveCaller(
+            activation_condition=self.const_drive_with_idx,
+            deactivation_condition=self.const_drive_with_idx
+        )
+        expected_str = "bistop,\n\tinitial status, active,\n\t# activation condition drive\n\treference, 5\n\t# deactivation condition drive\n\treference, 5"
+        self.assertEqual(str(bistop_drive), expected_str)
+        
+        # With custom initial_status
+        bistop_drive = l.BistopDriveCaller(
+            initial_status='inactive',
+            activation_condition=self.const_drive1,
+            deactivation_condition=self.const_drive2
+        )
+        expected_str = "bistop,\n\tinitial status, inactive,\n\t# activation condition drive\n\tconst, 1.0\n\t# deactivation condition drive\n\tconst, 0.0"
+        self.assertEqual(str(bistop_drive), expected_str)
+
+    def test_bistop_drive_caller_drive_type(self):
+        """Test the drive_type method of BistopDriveCaller"""
+        bistop_drive = l.BistopDriveCaller(
+            activation_condition=self.const_drive1,
+            deactivation_condition=self.const_drive2
+        )
+        self.assertEqual(bistop_drive.drive_type(), 'bistop')
+
+    @unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_bistop_drive_caller_missing_required_field(self):
+        """Test creating a BistopDriveCaller instance missing a required field"""
+        # Missing activation_condition
+        with self.assertRaises(Exception):
+            l.BistopDriveCaller(
+                deactivation_condition=self.const_drive2
+            )
+        
+        # Missing deactivation_condition
+        with self.assertRaises(Exception):
+            l.BistopDriveCaller(
+                activation_condition=self.const_drive1
+            )
+
+    unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_bistop_drive_caller_invalid_initial_status(self):
+        """Test creating a BistopDriveCaller with invalid initial_status"""
+        with self.assertRaises(Exception):
+            l.BistopDriveCaller(
+                initial_status='invalid_status',  # Invalid value
+                activation_condition=self.const_drive1,
+                deactivation_condition=self.const_drive2
+            )
+
+    unittest.skipIf(pydantic is None, "depends on library, since it doesn't prevent correct models from running")
+    def test_bistop_drive_caller_invalid_drive_types(self):
+        """Test creating a BistopDriveCaller with invalid drive types"""
+        with self.assertRaises(Exception):
+            l.BistopDriveCaller(
+                activation_condition="not a drive",  # Invalid type
+                deactivation_condition=self.const_drive2
+            )
+        
+        with self.assertRaises(Exception):
+            l.BistopDriveCaller(
+                activation_condition=self.const_drive1,
+                deactivation_condition="not a drive"  # Invalid type
+            )
+
+    def test_bistop_drive_caller_nested(self):
+        """Test creating a BistopDriveCaller with nested BistopDriveCallers"""
+        inner_bistop = l.BistopDriveCaller(
+            activation_condition=self.const_drive1,
+            deactivation_condition=self.const_drive2
+        )
+        
+        outer_bistop = l.BistopDriveCaller(
+            activation_condition=inner_bistop,
+            deactivation_condition=self.const_drive_with_idx
+        )
+        
+        self.assertIsInstance(outer_bistop, l.BistopDriveCaller)
+        self.assertEqual(outer_bistop.activation_condition, inner_bistop)
+        self.assertEqual(outer_bistop.deactivation_condition, self.const_drive_with_idx)
+        
+        # The string representation should properly nest the inner bistop drive
+        expected_inner_bistop_str = str(inner_bistop)
+        self.assertIn(expected_inner_bistop_str, str(outer_bistop))
+
+
 class TestConstDrive(unittest.TestCase):
     def test_const_drive_caller(self):
         """Check that the new module can be used the same way as the current one"""
